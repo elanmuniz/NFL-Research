@@ -101,10 +101,22 @@
       }
     ]
   },
-  "logistic_model": {
+  "logistic_model_turnover_only": {
+    "features": [
+      "turnover_margin"
+    ],
     "intercept": -0.0,
-    "coefficient_per_turnover": 0.7552,
-    "odds_ratio_per_turnover": 2.128,
+    "coefficients": {
+      "turnover_margin": 0.7552
+    },
+    "odds_ratio_per_increment": {
+      "turnover_margin": 2.128
+    },
+    "increment": {
+      "turnover_margin": 1.0,
+      "off_third_down_pct": 0.1,
+      "opp_third_down_pct": 0.1
+    },
     "n_games": 1708,
     "predicted_win_pct_by_margin": [
       {
@@ -152,5 +164,395 @@
         "predicted_win_pct": 97.8
       }
     ]
+  },
+  "logistic_model_multivariate": {
+    "features": [
+      "turnover_margin",
+      "off_third_down_pct",
+      "opp_third_down_pct"
+    ],
+    "intercept": 0.0,
+    "coefficients": {
+      "turnover_margin": 0.8297,
+      "off_third_down_pct": 4.7947,
+      "opp_third_down_pct": -4.7947
+    },
+    "odds_ratio_per_increment": {
+      "turnover_margin": 2.2925,
+      "off_third_down_pct": 1.6152,
+      "opp_third_down_pct": 0.6191
+    },
+    "increment": {
+      "turnover_margin": 1.0,
+      "off_third_down_pct": 0.1,
+      "opp_third_down_pct": 0.1
+    },
+    "n_games": 1708,
+    "example_scenarios": {
+      "league_avg_off_third_down_pct": 38.8,
+      "league_avg_opp_third_down_pct": 38.8,
+      "scenarios": [
+        {
+          "turnover_margin": -2,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 16.0
+        },
+        {
+          "turnover_margin": -2,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 10.5
+        },
+        {
+          "turnover_margin": -2,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 6.8
+        },
+        {
+          "turnover_margin": -2,
+          "offense": "league-avg offense",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 23.5
+        },
+        {
+          "turnover_margin": -2,
+          "offense": "league-avg offense",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 16.0
+        },
+        {
+          "turnover_margin": -2,
+          "offense": "league-avg offense",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 10.5
+        },
+        {
+          "turnover_margin": -2,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 33.2
+        },
+        {
+          "turnover_margin": -2,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 23.5
+        },
+        {
+          "turnover_margin": -2,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 16.0
+        },
+        {
+          "turnover_margin": -1,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 30.4
+        },
+        {
+          "turnover_margin": -1,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 21.3
+        },
+        {
+          "turnover_margin": -1,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 14.3
+        },
+        {
+          "turnover_margin": -1,
+          "offense": "league-avg offense",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 41.3
+        },
+        {
+          "turnover_margin": -1,
+          "offense": "league-avg offense",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 30.4
+        },
+        {
+          "turnover_margin": -1,
+          "offense": "league-avg offense",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 21.3
+        },
+        {
+          "turnover_margin": -1,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 53.2
+        },
+        {
+          "turnover_margin": -1,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 41.3
+        },
+        {
+          "turnover_margin": -1,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 30.4
+        },
+        {
+          "turnover_margin": 0,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 50.0
+        },
+        {
+          "turnover_margin": 0,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 38.2
+        },
+        {
+          "turnover_margin": 0,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 27.7
+        },
+        {
+          "turnover_margin": 0,
+          "offense": "league-avg offense",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 61.8
+        },
+        {
+          "turnover_margin": 0,
+          "offense": "league-avg offense",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 50.0
+        },
+        {
+          "turnover_margin": 0,
+          "offense": "league-avg offense",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 38.2
+        },
+        {
+          "turnover_margin": 0,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 72.3
+        },
+        {
+          "turnover_margin": 0,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 61.8
+        },
+        {
+          "turnover_margin": 0,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 50.0
+        },
+        {
+          "turnover_margin": 1,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 69.6
+        },
+        {
+          "turnover_margin": 1,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 58.7
+        },
+        {
+          "turnover_margin": 1,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 46.8
+        },
+        {
+          "turnover_margin": 1,
+          "offense": "league-avg offense",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 78.7
+        },
+        {
+          "turnover_margin": 1,
+          "offense": "league-avg offense",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 69.6
+        },
+        {
+          "turnover_margin": 1,
+          "offense": "league-avg offense",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 58.7
+        },
+        {
+          "turnover_margin": 1,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 85.7
+        },
+        {
+          "turnover_margin": 1,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 78.7
+        },
+        {
+          "turnover_margin": 1,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 69.6
+        },
+        {
+          "turnover_margin": 2,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 84.0
+        },
+        {
+          "turnover_margin": 2,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 76.5
+        },
+        {
+          "turnover_margin": 2,
+          "offense": "below-avg offense (-10pp)",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 28.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 66.8
+        },
+        {
+          "turnover_margin": 2,
+          "offense": "league-avg offense",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 89.5
+        },
+        {
+          "turnover_margin": 2,
+          "offense": "league-avg offense",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 84.0
+        },
+        {
+          "turnover_margin": 2,
+          "offense": "league-avg offense",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 38.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 76.5
+        },
+        {
+          "turnover_margin": 2,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "above-avg defense (-10pp allowed)",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 28.8,
+          "predicted_win_pct": 93.2
+        },
+        {
+          "turnover_margin": 2,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "league-avg defense",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 38.8,
+          "predicted_win_pct": 89.5
+        },
+        {
+          "turnover_margin": 2,
+          "offense": "above-avg offense (+10pp)",
+          "defense": "below-avg defense (+10pp allowed)",
+          "off_third_down_pct": 48.8,
+          "opp_third_down_pct": 48.8,
+          "predicted_win_pct": 84.0
+        }
+      ]
+    }
   }
 }

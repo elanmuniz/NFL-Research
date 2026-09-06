@@ -1,7 +1,7 @@
 # NFL Turnover Margin vs. Win Percentage
 
-A model quantifying how strongly winning the turnover battle in an NFL game
-relates to winning that game, using the last 3 completed seasons
+A model quantifying how strongly turnover margin and third-down conversion
+rate relate to winning an NFL game, using the last 3 completed seasons
 (2023-2025, regular season + playoffs).
 
 ## Method
@@ -12,11 +12,20 @@ For every team in every completed game:
   the ball
 - **takeaways** = the opponent's giveaways in that same game
 - **turnover_margin** = takeaways - giveaways
+- **off_third_down_pct** = that team's own 3rd-down conversion rate on offense
+- **opp_third_down_pct** = the opponent's 3rd-down conversion rate in the
+  same game, i.e. the rate the team's *defense* allowed
 
 Each team-game is bucketed as having *won*, *lost*, or *tied* the turnover
-battle, and win rate is computed within each bucket. A logistic regression
-(`win ~ turnover_margin`) is also fit to give a smooth predicted win
-probability for any margin value, not just the three buckets.
+battle, and win rate is computed within each bucket. Two logistic
+regressions are also fit:
+
+1. `win ~ turnover_margin` — a smooth predicted win probability for any
+   margin value, not just the three buckets.
+2. `win ~ turnover_margin + off_third_down_pct + opp_third_down_pct` — adds
+   both offensive and defensive third-down performance to see how much of
+   win probability each factor explains on its own, holding the others
+   fixed.
 
 Data comes from [nflverse-data](https://github.com/nflverse/nflverse-data)
 (play-by-play + schedules), pulled directly from its public GitHub release
@@ -55,6 +64,34 @@ Predicted win probability by turnover margin:
 | -2 | 18.1% | +4 | 95.4% |
 | -1 | 32.0% | +5 | 97.8% |
 | 0 | 50.0% | | |
+
+### Multivariate logistic regression: `win ~ turnover_margin + off_third_down_pct + opp_third_down_pct`
+
+League averages over 2023-2025: **38.8%** third-down conversion rate, both
+on offense and (symmetrically) on defense.
+
+| Feature | Coefficient | Odds ratio |
+|---|---|---|
+| turnover_margin | 0.8297 | **2.29x** per net turnover |
+| off_third_down_pct | 4.7947 | **1.62x** per +10 percentage points |
+| opp_third_down_pct | -4.7947 | **0.62x** per +10 percentage points allowed |
+
+Turnover margin's effect barely changes once third-down rates are added
+(2.29x vs. 2.13x alone) — it captures a mostly independent source of win
+probability, not something that's just a proxy for good third-down play.
+
+Predicted win% at turnover margin = 0, by offensive/defensive third-down
+tier (10pp = 10 percentage points relative to league average):
+
+| | Defense allows -10pp | League-avg defense | Defense allows +10pp |
+|---|---|---|---|
+| **Offense -10pp** | 50.0% | 38.2% | 27.7% |
+| **League-avg offense** | 61.8% | 50.0% | 38.2% |
+| **Offense +10pp** | 72.3% | 61.8% | 50.0% |
+
+More scenarios (crossed with turnover margin from -2 to +2):
+[`data/processed/summary.json`](data/processed/summary.json) under
+`logistic_model_multivariate.example_scenarios`.
 
 Full numbers: [`data/processed/summary.json`](data/processed/summary.json).
 Row-level data (one row per team per game):
