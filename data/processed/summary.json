@@ -1,0 +1,156 @@
+{
+  "overall": [
+    {
+      "bucket": "lost_margin",
+      "games": 653,
+      "wins": 157,
+      "win_pct": 24.0
+    },
+    {
+      "bucket": "tied_margin",
+      "games": 402,
+      "wins": 201,
+      "win_pct": 50.0
+    },
+    {
+      "bucket": "won_margin",
+      "games": 653,
+      "wins": 496,
+      "win_pct": 76.0
+    }
+  ],
+  "regular_season_only": [
+    {
+      "bucket": "lost_margin",
+      "games": 622,
+      "wins": 148,
+      "win_pct": 23.8
+    },
+    {
+      "bucket": "tied_margin",
+      "games": 386,
+      "wins": 193,
+      "win_pct": 50.0
+    },
+    {
+      "bucket": "won_margin",
+      "games": 622,
+      "wins": 474,
+      "win_pct": 76.2
+    }
+  ],
+  "per_season": {
+    "2023": [
+      {
+        "bucket": "lost_margin",
+        "games": 227,
+        "wins": 60,
+        "win_pct": 26.4
+      },
+      {
+        "bucket": "tied_margin",
+        "games": 116,
+        "wins": 58,
+        "win_pct": 50.0
+      },
+      {
+        "bucket": "won_margin",
+        "games": 227,
+        "wins": 167,
+        "win_pct": 73.6
+      }
+    ],
+    "2024": [
+      {
+        "bucket": "lost_margin",
+        "games": 209,
+        "wins": 48,
+        "win_pct": 23.0
+      },
+      {
+        "bucket": "tied_margin",
+        "games": 152,
+        "wins": 76,
+        "win_pct": 50.0
+      },
+      {
+        "bucket": "won_margin",
+        "games": 209,
+        "wins": 161,
+        "win_pct": 77.0
+      }
+    ],
+    "2025": [
+      {
+        "bucket": "lost_margin",
+        "games": 217,
+        "wins": 49,
+        "win_pct": 22.6
+      },
+      {
+        "bucket": "tied_margin",
+        "games": 134,
+        "wins": 67,
+        "win_pct": 50.0
+      },
+      {
+        "bucket": "won_margin",
+        "games": 217,
+        "wins": 168,
+        "win_pct": 77.4
+      }
+    ]
+  },
+  "logistic_model": {
+    "intercept": -0.0,
+    "coefficient_per_turnover": 0.7552,
+    "odds_ratio_per_turnover": 2.128,
+    "n_games": 1708,
+    "predicted_win_pct_by_margin": [
+      {
+        "turnover_margin": -5,
+        "predicted_win_pct": 2.2
+      },
+      {
+        "turnover_margin": -4,
+        "predicted_win_pct": 4.6
+      },
+      {
+        "turnover_margin": -3,
+        "predicted_win_pct": 9.4
+      },
+      {
+        "turnover_margin": -2,
+        "predicted_win_pct": 18.1
+      },
+      {
+        "turnover_margin": -1,
+        "predicted_win_pct": 32.0
+      },
+      {
+        "turnover_margin": 0,
+        "predicted_win_pct": 50.0
+      },
+      {
+        "turnover_margin": 1,
+        "predicted_win_pct": 68.0
+      },
+      {
+        "turnover_margin": 2,
+        "predicted_win_pct": 81.9
+      },
+      {
+        "turnover_margin": 3,
+        "predicted_win_pct": 90.6
+      },
+      {
+        "turnover_margin": 4,
+        "predicted_win_pct": 95.4
+      },
+      {
+        "turnover_margin": 5,
+        "predicted_win_pct": 97.8
+      }
+    ]
+  }
+}
