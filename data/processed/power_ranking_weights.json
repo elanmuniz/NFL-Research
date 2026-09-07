@@ -1,27 +1,27 @@
 {
   "means": {
-    "turnover_margin_pg": -4.625929269271485e-18,
-    "passer_rating_diff": 0.06550538815982421,
-    "ypp_diff": 0.0019247224587641647,
-    "success_rate_diff": 4.9469092632201e-05,
-    "redzone_td_pct_diff": -0.004697322894090278,
-    "adj_epa_rating": 1.61907524424502e-17
+    "turnover_margin_pg": -0.0,
+    "passer_rating_diff": 0.06550539,
+    "ypp_diff": 0.00192472,
+    "success_rate_diff": 4.947e-05,
+    "redzone_td_pct_diff": -0.00469732,
+    "adj_epa_rating": -1e-08
   },
   "stds": {
-    "turnover_margin_pg": 0.527792501293625,
-    "passer_rating_diff": 14.389779769002457,
-    "ypp_diff": 0.6949039853452799,
-    "success_rate_diff": 0.042364040200210146,
-    "redzone_td_pct_diff": 0.10223493962258257,
-    "adj_epa_rating": 0.1275719286184033
+    "turnover_margin_pg": 0.5277925,
+    "passer_rating_diff": 14.38977977,
+    "ypp_diff": 0.69490399,
+    "success_rate_diff": 0.04236404,
+    "redzone_td_pct_diff": 0.10223494,
+    "adj_epa_rating": 0.12757194
   },
   "weights": {
-    "turnover_margin_pg": 0.32541231451906427,
-    "passer_rating_diff": 0.5671834515661209,
-    "ypp_diff": 0.15244912430385826,
-    "success_rate_diff": 0.9172576077763919,
-    "redzone_td_pct_diff": 0.01401139866302581,
-    "adj_epa_rating": 4.278344244446046
+    "turnover_margin_pg": 0.32541235,
+    "passer_rating_diff": 0.56718356,
+    "ypp_diff": 0.15244805,
+    "success_rate_diff": 0.91725854,
+    "redzone_td_pct_diff": 0.01401074,
+    "adj_epa_rating": 4.2783447
   },
   "univariate_r_with_point_margin": {
     "turnover_margin_pg": 0.6228,
@@ -31,7 +31,7 @@
     "redzone_td_pct_diff": 0.5552,
     "adj_epa_rating": 0.9627
   },
-  "intercept": 3.860440589119162e-17,
+  "intercept": -0.0,
   "r_squared": 0.9341,
   "n_team_seasons": 96,
   "train_seasons": [

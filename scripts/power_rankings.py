@@ -277,7 +277,12 @@ def cumulative_team_stats(long, through_week=None):
         opp_epa_pp = row["opp_epa_sum"] / row["opp_scrimmage_plays"] if row["opp_scrimmage_plays"] else 0.0
         per_game_epa_margin.append((row["team"], row["opponent"], own_epa_pp - opp_epa_pp))
     srs = solve_srs(per_game_epa_margin)
-    agg["adj_epa_rating"] = agg["team"].map(srs)
+    # np.linalg.lstsq's floating-point result isn't bit-stable run to run
+    # (BLAS summation order varies by platform/thread count) -- round away
+    # noise far below anything meaningful so re-running on unchanged data
+    # doesn't produce a spurious diff (the weekly workflow only commits
+    # when something actually changed).
+    agg["adj_epa_rating"] = agg["team"].map(srs).round(6)
 
     return agg
 
@@ -319,12 +324,15 @@ def train_weights():
         for feat in DIFF_FEATURES
     }
 
+    # Round the same way and for the same reason as adj_epa_rating above:
+    # absorb lstsq's run-to-run float noise so unchanged data reproduces
+    # byte-identical JSON.
     return {
-        "means": means.to_dict(),
-        "stds": stds.to_dict(),
-        "weights": weights,
+        "means": {k: round(v, 8) for k, v in means.to_dict().items()},
+        "stds": {k: round(v, 8) for k, v in stds.to_dict().items()},
+        "weights": {k: round(v, 8) for k, v in weights.items()},
         "univariate_r_with_point_margin": univariate_r,
-        "intercept": float(model.intercept_),
+        "intercept": round(float(model.intercept_), 8),
         "r_squared": round(float(r2), 4),
         "n_team_seasons": int(len(train_df)),
         "train_seasons": TRAIN_SEASONS,
@@ -386,5 +394,7 @@ if __name__ == "__main__":
     print(current_stats[display_cols].round(3).to_string(index=False))
 
     out_path = os.path.join(PROCESSED_DIR, f"power_rankings_{args.season}_wk{through_week}.csv")
+    numeric_cols = current_stats.select_dtypes(include="number").columns
+    current_stats[numeric_cols] = current_stats[numeric_cols].round(8)
     current_stats.to_csv(out_path, index=False)
     print(f"\nSaved {out_path}")
