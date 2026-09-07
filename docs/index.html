@@ -57,6 +57,12 @@
   .stat-row { display: flex; gap: 2rem; flex-wrap: wrap; }
   .stat-value { font-size: 2rem; font-weight: 700; color: var(--accent); }
   .stat-label { color: var(--muted); font-size: 0.85rem; max-width: 16rem; }
+  .metric-label {
+    color: var(--accent); font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; margin: 1rem 0 0.15rem;
+  }
+  .metric-label:first-of-type { margin-top: 0.25rem; }
+  .card p:not(.metric-label):not(.muted) { margin: 0 0 0.5rem; line-height: 1.5; }
   footer { max-width: 1000px; margin: 0 auto; padding: 0 1.25rem 2rem; color: var(--muted); font-size: 0.8rem; }
   a { color: var(--accent); }
 </style>
@@ -65,7 +71,7 @@
 <header>
   <h1>NFL Power Rankings &mdash; 2026</h1>
   <p>Ranked on turnover margin, passer rating differential, yards/play &amp; success rate, red zone efficiency, and an opponent-adjusted (DVOA-style) EPA rating.</p>
-  <nav class="top-nav"><a class="nav-link active" href="index.html">Live Rankings</a><a class="nav-link" href="season-2025.html">2025 Final Rankings</a></nav>
+  <nav class="top-nav"><a class="nav-link active" href="index.html">Live Rankings</a><a class="nav-link" href="season-2025.html">2025 Final Rankings</a><a class="nav-link" href="metrics.html">Metrics Explained</a></nav>
 </header>
 <main>
 
@@ -106,7 +112,7 @@
     
 </main>
 <footer>
-  Generated 2026-09-07 01:33 UTC &middot; data from
+  Generated 2026-09-07 01:49 UTC &middot; data from
   <a href="https://github.com/nflverse/nflverse-data">nflverse-data</a> &middot;
   <a href="https://github.com/elanmuniz/NFL-Research">source</a>
 </footer>

@@ -47,6 +47,93 @@ RANK_DISPLAY_COLS = [
 PAGES = [
     ("index.html", "Live Rankings"),
     ("season-2025.html", "2025 Final Rankings"),
+    ("metrics.html", "Metrics Explained"),
+]
+
+METRICS = [
+    {
+        "name": "Turnover Margin",
+        "column": "turnover_margin_pg",
+        "stat": "The difference between takeaways (interceptions and fumble "
+                "recoveries) and giveaways (interceptions thrown and fumbles lost) "
+                "in a game.",
+        "why": "Winning the turnover battle drastically shifts win probability. "
+               "Teams that finish a game with a positive turnover margin win a vast "
+               "majority of their games at every level of football &mdash; in our own "
+               "2023-2025 data, teams that won the turnover battle won 76% of their "
+               "games, versus 24% for teams that lost it.",
+        "how": "Giveaways = interceptions thrown + fumbles lost while on offense. "
+               "Takeaways = the opponent's giveaways in that same game. We sum both "
+               "across the season and report the per-game average margin "
+               "(takeaways &minus; giveaways) &divide; games played.",
+    },
+    {
+        "name": "Passer Rating Differential",
+        "column": "passer_rating_diff",
+        "stat": "The gap between a team's own passer rating (thrown by its "
+                "offense) and the passer rating it allows opponents to throw "
+                "against its defense.",
+        "why": "Dominating this metric is one of the most reliable separators "
+               "between winning and losing teams, because it captures both elite "
+               "quarterback play and a strong pass defense in a single number.",
+        "how": "Standard NFL passer rating (completion %, yards/attempt, TD%, and "
+               "INT% each clipped to a 0&ndash;2.375 scale, combined and multiplied "
+               "up to a 0&ndash;158.3 scale), computed once from season-cumulative "
+               "attempts/completions/yards/TDs/INTs &mdash; both for the team's own "
+               "offense and for what it allowed on defense &mdash; then subtracted.",
+    },
+    {
+        "name": "Yards Per Play &amp; Success Rate",
+        "column": "ypp_diff / success_rate_diff",
+        "stat": "Efficiency measured per snap &mdash; yards gained per play, and the "
+                "share of plays that count as \"successful\" (gaining a meaningful "
+                "fraction of the yards needed for a first down) &mdash; rather than "
+                "cumulative totals.",
+        "why": "Raw yardage totals can be misleading: garbage-time drives in a "
+               "blowout inflate them without reflecting real game control. "
+               "Efficiency per snap, and converting a high share of downs, is what "
+               "actually dictates who controls a game.",
+        "how": "For every rush/pass snap (excluding kneels, spikes, and special "
+               "teams), we sum yards gained and nflfastR's play-level success flag "
+               "across the season for both sides of the ball, divide by play count, "
+               "and subtract what the defense allowed from what the offense gained.",
+    },
+    {
+        "name": "Red Zone Efficiency",
+        "column": "redzone_td_pct_diff",
+        "stat": "Touchdown conversion percentage on drives that reach inside the "
+                "opponent's 20-yard line, for both offense and defense.",
+        "why": "Moving the ball down the field is worth little if it results in "
+               "field goals instead of touchdowns. Winning teams punch the ball in "
+               "once they get close, and keep opponents out of the end zone when "
+               "the defense is backed up.",
+        "how": "Every offensive drive that ever crosses the 20 counts as a red zone "
+               "trip; it counts as converted only if that drive's outcome is a "
+               "touchdown. We use season totals (total TDs &divide; total trips), "
+               "never an average of per-game percentages, so one small-sample game "
+               "(e.g. 1-for-1) can't swing the number.",
+    },
+    {
+        "name": "Adjusted EPA Rating",
+        "column": "adj_epa_rating",
+        "stat": "An opponent-adjusted efficiency rating &mdash; this project's "
+                "stand-in for DVOA (Defense-adjusted Value Over Average).",
+        "why": "A metric that reliably correlates with sustained, multi-year "
+               "winning records has to filter out schedule strength: a team that "
+               "padded its stats against bad defenses shouldn't rank the same as "
+               "one that earned them against good ones.",
+        "how": "<strong>Caveat:</strong> real DVOA (Football Outsiders/FTN) is a "
+               "proprietary, licensed metric that weights every play by down, "
+               "distance, score, and time remaining, using a non-public "
+               "methodology &mdash; it isn't available in any free dataset, so this "
+               "project can't reproduce it exactly. Instead we compute each team's "
+               "raw EPA (Expected Points Added) per play on offense and defense, "
+               "then run each team's per-game net EPA margin through the "
+               "<strong>Simple Rating System</strong> (SRS) &mdash; the same "
+               "least-squares opponent-adjustment idea DVOA is built on, just "
+               "without the situational weighting. Read <code>adj_epa_rating</code> "
+               "as directionally DVOA-like, not the real thing.",
+    },
 ]
 
 
@@ -251,6 +338,12 @@ STYLE = """
   .stat-row { display: flex; gap: 2rem; flex-wrap: wrap; }
   .stat-value { font-size: 2rem; font-weight: 700; color: var(--accent); }
   .stat-label { color: var(--muted); font-size: 0.85rem; max-width: 16rem; }
+  .metric-label {
+    color: var(--accent); font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; margin: 1rem 0 0.15rem;
+  }
+  .metric-label:first-of-type { margin-top: 0.25rem; }
+  .card p:not(.metric-label):not(.muted) { margin: 0 0 0.5rem; line-height: 1.5; }
   footer { max-width: 1000px; margin: 0 auto; padding: 0 1.25rem 2rem; color: var(--muted); font-size: 0.8rem; }
   a { color: var(--accent); }
 """
@@ -285,6 +378,31 @@ def page_shell(active_file, title, subtitle, body_html):
 """
 
 
+def metrics_section():
+    cards = []
+    for m in METRICS:
+        cards.append(f"""
+        <section class="card">
+          <h2>{m['name']}</h2>
+          <p class="metric-label">The stat</p>
+          <p>{m['stat']}</p>
+          <p class="metric-label">Why it matters</p>
+          <p>{m['why']}</p>
+          <p class="metric-label">How we compute it</p>
+          <p>{m['how']}</p>
+        </section>
+        """)
+    return "".join(cards)
+
+
+def build_metrics_page():
+    body = metrics_section()
+    subtitle = ("What each metric in the Power Score model means, why it's a leading "
+                "indicator of winning football, and exactly how it's computed from "
+                "play-by-play data.")
+    return page_shell("metrics.html", "Metrics Explained", subtitle, body)
+
+
 def build_index_page():
     body = live_rankings_section() + weights_section() + turnover_section()
     subtitle = (
@@ -310,6 +428,10 @@ if __name__ == "__main__":
     with open(os.path.join(DOCS_DIR, f"season-{FINAL_SEASON}.html"), "w") as f:
         f.write(build_final_season_page(FINAL_SEASON))
     print(f"Wrote {DOCS_DIR}/season-{FINAL_SEASON}.html")
+
+    with open(os.path.join(DOCS_DIR, "metrics.html"), "w") as f:
+        f.write(build_metrics_page())
+    print(f"Wrote {DOCS_DIR}/metrics.html")
 
     # Tell GitHub Pages not to run this through Jekyll.
     open(os.path.join(DOCS_DIR, ".nojekyll"), "w").close()

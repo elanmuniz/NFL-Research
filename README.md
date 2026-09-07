@@ -331,6 +331,4 @@ regeneration. To finish wiring it up:
    | A | @ | 185.199.111.153 |
    | CNAME | www | `<owner>.github.io` |
 
-3. Once DNS propagates (minutes to ~24h) and repo → Settings → Pages shows
-   the domain verified, check **Enforce HTTPS** there for a free auto-issued
-   certificate.
+DNS propagation can take anywhere from minutes to ~24h.
