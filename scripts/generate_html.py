@@ -44,6 +44,28 @@ RANK_DISPLAY_COLS = [
     ("adj_epa_rating", "Adj. EPA Rating", "{:+.3f}"),
 ]
 
+COLUMN_TOOLTIPS = {
+    "rank": "Position in the Power Score ranking, 1 = best.",
+    "team": "NFL team abbreviation.",
+    "games_played": "Games played this season (regular season only).",
+    "win_pct": "Percentage of games won this season.",
+    "power_score": "Composite ranking score: the six metrics to the right, "
+                   "z-scored and combined using weights trained on 2023-2025 "
+                   "team-season point margin.",
+    "turnover_margin_pg": "Takeaways minus giveaways, averaged per game.",
+    "passer_rating_diff": "The team's own passer rating minus the passer "
+                          "rating it allows on defense.",
+    "ypp_diff": "Yards gained per offensive play minus yards allowed per "
+                "defensive play.",
+    "success_rate_diff": "Share of offensive plays gaining a meaningful "
+                         "fraction of yards-to-go, minus the same rate "
+                         "allowed on defense.",
+    "redzone_td_pct_diff": "Touchdown % on offensive red zone trips minus "
+                           "touchdown % allowed on defense.",
+    "adj_epa_rating": "Opponent-adjusted EPA/play rating — a DVOA-style "
+                      "proxy, not licensed DVOA data.",
+}
+
 PAGES = [
     ("index.html", "Live Rankings"),
     ("season-2025.html", "2025 Final Rankings"),
@@ -150,7 +172,14 @@ def find_rankings(season):
 
 
 def rankings_table_html(df):
-    head = "".join(f"<th>{label}</th>" for _, label, _ in RANK_DISPLAY_COLS)
+    head_cells = []
+    for col, label, _ in RANK_DISPLAY_COLS:
+        tip = COLUMN_TOOLTIPS.get(col)
+        if tip:
+            head_cells.append(f'<th title="{html.escape(tip)}"><span class="has-tip">{label}</span></th>')
+        else:
+            head_cells.append(f"<th>{label}</th>")
+    head = "".join(head_cells)
     rows = []
     for _, row in df.iterrows():
         cells = []
@@ -164,6 +193,12 @@ def rankings_table_html(df):
             cells.append(f"<td{css}>{text}</td>")
         rows.append(f"<tr>{''.join(cells)}</tr>")
     return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
+
+
+TABLE_HINT_HTML = (
+    '<p class="muted table-hint">Hover over a column header for a quick explanation, '
+    'or see <a href="metrics.html">Metrics Explained</a> for full detail.</p>'
+)
 
 
 def load_summary():
@@ -189,10 +224,8 @@ def live_rankings_section():
         <section class="card">
           <h2>{CURRENT_SEASON} Power Rankings</h2>
           <p class="muted">
-            The {CURRENT_SEASON} season hasn't produced any completed games yet
-            (or this page was built before <code>scripts/fetch_data.py</code> picked up
-            the first week's data). Rankings will appear here automatically once games
-            are played &mdash; see the weekly update workflow in the repo.
+            The {CURRENT_SEASON} season hasn't produced any completed games yet.
+            Rankings will appear here automatically once games are played.
           </p>
         </section>
         """
@@ -201,6 +234,7 @@ def live_rankings_section():
     <section class="card">
       <h2>{CURRENT_SEASON} Power Rankings <span class="muted">&mdash; through week {week}</span></h2>
       <div class="table-wrap">{rankings_table_html(df)}</div>
+      {TABLE_HINT_HTML}
     </section>
     """
 
@@ -224,6 +258,7 @@ def final_season_section(season):
         {CURRENT_SEASON} rankings, weights trained on 2023-2025 team-seasons.
       </p>
       <div class="table-wrap">{rankings_table_html(df)}</div>
+      {TABLE_HINT_HTML}
     </section>
     """
 
@@ -334,7 +369,10 @@ STYLE = """
   th:first-child, td:first-child { text-align: left; }
   td.team-cell { text-align: left; font-weight: 600; }
   thead th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+  thead th .has-tip { cursor: help; border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
+  thead th .has-tip:hover { color: var(--accent); border-bottom-color: var(--accent); }
   tbody tr:hover { background: rgba(79, 140, 255, 0.08); }
+  .table-hint { margin: 0.6rem 0 0; }
   .stat-row { display: flex; gap: 2rem; flex-wrap: wrap; }
   .stat-value { font-size: 2rem; font-weight: 700; color: var(--accent); }
   .stat-label { color: var(--muted); font-size: 0.85rem; max-width: 16rem; }

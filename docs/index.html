@@ -53,7 +53,10 @@
   th:first-child, td:first-child { text-align: left; }
   td.team-cell { text-align: left; font-weight: 600; }
   thead th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+  thead th .has-tip { cursor: help; border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
+  thead th .has-tip:hover { color: var(--accent); border-bottom-color: var(--accent); }
   tbody tr:hover { background: rgba(79, 140, 255, 0.08); }
+  .table-hint { margin: 0.6rem 0 0; }
   .stat-row { display: flex; gap: 2rem; flex-wrap: wrap; }
   .stat-value { font-size: 2rem; font-weight: 700; color: var(--accent); }
   .stat-label { color: var(--muted); font-size: 0.85rem; max-width: 16rem; }
@@ -78,10 +81,8 @@
         <section class="card">
           <h2>2026 Power Rankings</h2>
           <p class="muted">
-            The 2026 season hasn't produced any completed games yet
-            (or this page was built before <code>scripts/fetch_data.py</code> picked up
-            the first week's data). Rankings will appear here automatically once games
-            are played &mdash; see the weekly update workflow in the repo.
+            The 2026 season hasn't produced any completed games yet.
+            Rankings will appear here automatically once games are played.
           </p>
         </section>
         
@@ -112,7 +113,7 @@
     
 </main>
 <footer>
-  Generated 2026-09-07 01:49 UTC &middot; data from
+  Generated 2026-09-07 16:24 UTC &middot; data from
   <a href="https://github.com/nflverse/nflverse-data">nflverse-data</a> &middot;
   <a href="https://github.com/elanmuniz/NFL-Research">source</a>
 </footer>
