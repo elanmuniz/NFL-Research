@@ -1,0 +1,42 @@
+{
+  "means": {
+    "turnover_margin_pg": -4.625929269271485e-18,
+    "passer_rating_diff": 0.06550538815982421,
+    "ypp_diff": 0.0019247224587641647,
+    "success_rate_diff": 4.9469092632201e-05,
+    "redzone_td_pct_diff": -0.004697322894090278,
+    "adj_epa_rating": 0.0
+  },
+  "stds": {
+    "turnover_margin_pg": 0.527792501293625,
+    "passer_rating_diff": 14.389779769002457,
+    "ypp_diff": 0.6949039853452799,
+    "success_rate_diff": 0.042364040200210146,
+    "redzone_td_pct_diff": 0.10223493962258257,
+    "adj_epa_rating": 0.12757192861840322
+  },
+  "weights": {
+    "turnover_margin_pg": 0.32541231451906766,
+    "passer_rating_diff": 0.5671834515661258,
+    "ypp_diff": 0.15244912430385715,
+    "success_rate_diff": 0.9172576077763985,
+    "redzone_td_pct_diff": 0.01401139866302663,
+    "adj_epa_rating": 4.278344244446034
+  },
+  "univariate_r_with_point_margin": {
+    "turnover_margin_pg": 0.6228,
+    "passer_rating_diff": 0.8943,
+    "ypp_diff": 0.8502,
+    "success_rate_diff": 0.8829,
+    "redzone_td_pct_diff": 0.5552,
+    "adj_epa_rating": 0.9627
+  },
+  "intercept": -4.0560865566416975e-17,
+  "r_squared": 0.9341,
+  "n_team_seasons": 96,
+  "train_seasons": [
+    2023,
+    2024,
+    2025
+  ]
+}

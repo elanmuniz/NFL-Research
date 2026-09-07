@@ -1,10 +1,36 @@
-# NFL Turnover Margin vs. Win Percentage
+# NFL Research
+
+Two related models, both built on [nflverse-data](https://github.com/nflverse/nflverse-data)
+(play-by-play + schedules), pulled directly from its public GitHub release assets:
+
+1. [Turnover margin vs. win percentage](#nfl-turnover-margin-vs-win-percentage) —
+   a historical (2023-2025) analysis of how turnover margin and third-down
+   conversion rate relate to winning a game.
+2. [2026 season power rankings](#2026-season-power-rankings) — a
+   weekly-updating model that ranks all 32 teams through the 2026 season
+   using turnover margin, passer rating differential, yards/play & success
+   rate, red zone efficiency, and an opponent-adjusted efficiency rating.
+
+## Setup
+
+```bash
+pip install -r requirements.txt
+python scripts/fetch_data.py   # downloads raw data into data/raw/
+```
+
+`fetch_data.py` pulls `games.csv` (schedules/results) and
+`play_by_play_<season>.csv.gz` for 2023-2025 plus the current season
+(2026). During the 2026 season, nflverse republishes that file within about
+a day of each game, so re-running `fetch_data.py` is how you pull in newly
+played weeks.
+
+## NFL Turnover Margin vs. Win Percentage
 
 A model quantifying how strongly turnover margin and third-down conversion
 rate relate to winning an NFL game, using the last 3 completed seasons
 (2023-2025, regular season + playoffs).
 
-## Method
+### Method
 
 For every team in every completed game:
 
@@ -27,11 +53,7 @@ regressions are also fit:
    win probability each factor explains on its own, holding the others
    fixed.
 
-Data comes from [nflverse-data](https://github.com/nflverse/nflverse-data)
-(play-by-play + schedules), pulled directly from its public GitHub release
-assets.
-
-## Results (2023-2025, all games)
+### Results (2023-2025, all games)
 
 | Turnover margin outcome | Games | Win % |
 |---|---|---|
@@ -49,7 +71,7 @@ By season:
 | 2024 | 77.0% | 23.0% |
 | 2025 | 77.4% | 22.6% |
 
-### Logistic regression: `win ~ turnover_margin`
+#### Logistic regression: `win ~ turnover_margin`
 
 - coefficient = 0.7552 (odds ratio ≈ **2.13x** per net turnover)
 - intercept ≈ 0 (a game with an even turnover margin is a coin flip, as expected)
@@ -65,7 +87,7 @@ Predicted win probability by turnover margin:
 | -1 | 32.0% | +5 | 97.8% |
 | 0 | 50.0% | | |
 
-### Multivariate logistic regression: `win ~ turnover_margin + off_third_down_pct + opp_third_down_pct`
+#### Multivariate logistic regression: `win ~ turnover_margin + off_third_down_pct + opp_third_down_pct`
 
 League averages over 2023-2025: **38.8%** third-down conversion rate, both
 on offense and (symmetrically) on defense.
@@ -97,13 +119,143 @@ Full numbers: [`data/processed/summary.json`](data/processed/summary.json).
 Row-level data (one row per team per game):
 [`data/processed/team_game_turnover_table.csv`](data/processed/team_game_turnover_table.csv).
 
-## Reproducing
+### Reproducing
 
 ```bash
-pip install -r requirements.txt
-python scripts/fetch_data.py          # downloads raw data into data/raw/
-python scripts/build_turnover_model.py # writes data/processed/*
+python scripts/build_turnover_model.py   # writes data/processed/summary.json
+                                          # and team_game_turnover_table.csv
 ```
 
 To analyze a different window of seasons, edit `SEASONS` at the top of
-`scripts/fetch_data.py` and `scripts/build_turnover_model.py`.
+`scripts/build_turnover_model.py` (and `TRAIN_SEASONS` in `fetch_data.py`
+if you need different raw data pulled).
+
+## 2026 Season Power Rankings
+
+`scripts/power_rankings.py` ranks all 32 teams throughout the 2026 season
+using five metrics commonly cited as leading indicators of winning
+football:
+
+| Metric | What it captures |
+|---|---|
+| **Turnover margin** | takeaways minus giveaways per game |
+| **Passer rating differential** | own passer rating thrown minus the passer rating allowed |
+| **Yards/play & success rate** | offensive efficiency vs. what the defense allows, per snap rather than raw totals |
+| **Red zone TD efficiency** | TD% on offensive trips inside the 20 minus TD% allowed on defense |
+| **Adjusted EPA rating** | a DVOA-style, opponent-adjusted efficiency rating (see caveat below) |
+
+### DVOA caveat
+
+Real DVOA (Football Outsiders / FTN) is a **proprietary, licensed** metric
+that weights every play by down, distance, score, and time remaining, and
+adjusts for opponent strength using a non-public methodology. It isn't
+available in any free dataset, so this model doesn't (and can't) reproduce
+it exactly.
+
+Instead, `adj_epa_rating` is an open substitute built the same way DVOA's
+opponent-adjustment idea works, minus the situational weighting: it takes
+each team's per-game net EPA/play margin (its own offensive EPA/play minus
+what it allowed on defense) and runs it through the **Simple Rating
+System** (SRS) — the classic least-squares method that strips out whether
+a team's numbers came against a soft or tough schedule. Treat
+`adj_epa_rating` as a DVOA-style proxy, not licensed DVOA data.
+
+### How the ranking is built
+
+1. **Train fixed weights once, from history.** For every team-season in
+   2023-2025 (regular season only, 96 team-seasons), compute the five
+   metrics above as differentials, z-score them, and fit a linear
+   regression against that team's average point margin per game. The
+   resulting standardized coefficients become the Power Score weights —
+   this is the same "let the data set the weights" approach used in the
+   turnover-margin model above, just extended to five inputs.
+2. **Apply those fixed weights every week of 2026.** As each week is
+   played, recompute the five metrics from that team's games so far,
+   z-score using the *training* distribution (so scores stay on a
+   consistent scale across weeks and seasons), and combine into one Power
+   Score. Rank teams by that score.
+
+Rates are always computed from **season-to-date summed counts** (total
+completions ÷ total attempts, total red zone TDs ÷ total red zone trips,
+etc.), never as an average of per-game percentages — this avoids letting a
+single small-sample game (e.g. 2-for-2 in the red zone) swing a team's
+efficiency numbers.
+
+### Trained weights (2023-2025)
+
+R² = 0.934 (n = 96 team-seasons) predicting average point margin per game.
+
+| Metric | Joint weight (standardized) | Standalone correlation with point margin |
+|---|---|---|
+| adj_epa_rating | 4.28 | 0.96 |
+| success_rate_diff | 0.92 | 0.88 |
+| passer_rating_diff | 0.57 | 0.89 |
+| turnover_margin_pg | 0.33 | 0.62 |
+| ypp_diff | 0.15 | 0.85 |
+| redzone_td_pct_diff | 0.01 | 0.56 |
+
+**Why `adj_epa_rating` dominates the joint weights:** these five metrics
+overlap heavily — EPA/play is itself a function of yardage, success/failure,
+scoring, and turnovers, so it's correlated 0.6-0.7 with the other four. Once
+it's in the model, a regression naturally assigns it most of the shared
+credit for predicting point margin, which compresses the others' *joint*
+weights even though each is independently a strong predictor on its own
+(see the standalone-correlation column — every metric here correlates
+0.56+ with point margin by itself). Read the joint weights as "how the
+composite score is built," and the standalone correlations as "how
+predictive each metric is in isolation" — both are saved in
+[`data/processed/power_ranking_weights.json`](data/processed/power_ranking_weights.json).
+
+### Validation (backtest demo)
+
+The 2026 season hadn't started as of this writing (first game: Sept 9,
+2026), so there's no live data to rank yet. As a demonstration and sanity
+check, here's the model backtested on the actual 2025 season through week
+8, using the same weights trained on 2023-2025:
+
+```bash
+python scripts/power_rankings.py --season 2025 --through-week 8
+```
+
+Top and bottom 5 of 32:
+
+| Rank | Team | Games | Power Score | Win % |
+|---|---|---|---|---|
+| 1 | KC | 8 | 12.07 | 62.5% |
+| 2 | LA | 7 | 10.90 | 71.4% |
+| 3 | DET | 7 | 10.68 | 71.4% |
+| 4 | IND | 8 | 9.73 | 87.5% |
+| 5 | HOU | 7 | 8.55 | 42.9% |
+| ... | | | | |
+| 28 | MIA | 8 | -8.27 | 25.0% |
+| 29 | NYJ | 8 | -8.66 | 12.5% |
+| 30 | LV | 7 | -9.53 | 28.6% |
+| 31 | CIN | 8 | -11.85 | 37.5% |
+| 32 | TEN | 8 | -12.28 | 12.5% |
+
+- Power Score through week 8 correlates **0.82** with each team's actual
+  win% through week 8 (it's not just reconstructing the standings — HOU
+  ranks 5th on process despite a 42.9% record, CIN ranks near the bottom
+  despite a 37.5% record).
+- Power Score through week 8 still correlates **0.62** with each team's
+  **final season** win%, i.e. it captures real signal beyond that week's
+  win-loss record, not just noise that happens to wash out by year end.
+
+Full output: [`data/processed/power_rankings_2025_wk8.csv`](data/processed/power_rankings_2025_wk8.csv).
+
+### Running it during the 2026 season
+
+```bash
+python scripts/fetch_data.py       # refresh raw data with the latest played week
+python scripts/power_rankings.py   # rank through the latest completed week
+```
+
+Add `--through-week N` to rank as of an earlier week instead of the latest.
+Output is saved to `data/processed/power_rankings_2026_wk<N>.csv`; the
+trained weights (retrained on 2023-2025 every run, so they don't drift) are
+saved to `data/processed/power_ranking_weights.json`.
+
+Before the season starts, or if `data/raw/play_by_play_2026.csv.gz` hasn't
+been published/fetched yet, the script trains and saves the weights and
+then exits with a message — there's nothing to rank until the first games
+are played.
