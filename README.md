@@ -311,3 +311,26 @@ toggle):
 GitHub will publish it at `https://<owner>.github.io/<repo>/` within a
 minute or two, and it'll pick up new commits from the workflow above
 automatically — no redeploy step needed.
+
+**Custom domain:** [`docs/CNAME`](docs/CNAME) already points this site at
+`winthemargins.com` — that file is what tells GitHub Pages to serve on a
+custom domain instead of (or alongside) the default `github.io` URL, and
+`generate_html.py` never touches it, so it survives every automated
+regeneration. To finish wiring it up:
+
+1. Register `winthemargins.com` with any registrar (Namecheap, Cloudflare,
+   Porkbun, GoDaddy, ...) — this and the next step require your own
+   registrar account and can't be done from this repo.
+2. In its DNS settings, add:
+
+   | Type | Host | Value |
+   |---|---|---|
+   | A | @ | 185.199.108.153 |
+   | A | @ | 185.199.109.153 |
+   | A | @ | 185.199.110.153 |
+   | A | @ | 185.199.111.153 |
+   | CNAME | www | `<owner>.github.io` |
+
+3. Once DNS propagates (minutes to ~24h) and repo → Settings → Pages shows
+   the domain verified, check **Enforce HTTPS** there for a free auto-issued
+   certificate.
