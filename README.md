@@ -10,6 +10,9 @@ Two related models, both built on [nflverse-data](https://github.com/nflverse/nf
    weekly-updating model that ranks all 32 teams through the 2026 season
    using turnover margin, passer rating differential, yards/play & success
    rate, red zone efficiency, and an opponent-adjusted efficiency rating.
+   Updates automatically after each week's games and publishes to a live
+   [GitHub Pages site](#automatic-weekly-updates--a-live-site) — see that
+   section for the one-time setup.
 
 ## Setup
 
@@ -259,3 +262,39 @@ Before the season starts, or if `data/raw/play_by_play_2026.csv.gz` hasn't
 been published/fetched yet, the script trains and saves the weights and
 then exits with a message — there's nothing to rank until the first games
 are played.
+
+### Automatic weekly updates + a live site
+
+This runs itself — no one needs to remember to run it after each week's
+games.
+
+**Automation:** [`.github/workflows/update-rankings.yml`](.github/workflows/update-rankings.yml)
+runs on a schedule (Tuesdays and Wednesdays at 13:00 UTC, i.e. after Monday
+Night Football, with a second run in case nflverse's data publish lags) and
+on manual trigger (the "Run workflow" button under the repo's Actions tab).
+Each run:
+
+1. `scripts/fetch_data.py` — pulls the latest `play_by_play_2026.csv.gz`
+2. `scripts/power_rankings.py` — recomputes that week's rankings
+3. `scripts/generate_html.py` — rebuilds `docs/index.html`
+4. Commits `data/processed/` and `docs/` back to this branch, only if
+   anything actually changed (a bye week or no new data means no commit)
+
+This branch (`claude/nfl-turnover-margin-wins-ieur9y`) is currently this
+repo's only branch, so it's also the default branch — which is what
+scheduled workflows run against. If you later create and switch to a
+`main` branch, move this workflow there too, or scheduled runs will stop
+firing.
+
+**Live site:** `docs/index.html` is a self-contained static page (dark/light
+mode, no build step, no JS framework) meant to be served by **GitHub
+Pages**. One-time setup (not something the API can do — it's a repo
+settings toggle):
+
+1. Repo → **Settings → Pages**
+2. Under **Build and deployment**, set **Source** to "Deploy from a branch"
+3. Branch: this branch, folder: **/docs** → **Save**
+
+GitHub will publish it at `https://<owner>.github.io/<repo>/` within a
+minute or two, and it'll pick up new commits from the workflow above
+automatically — no redeploy step needed.

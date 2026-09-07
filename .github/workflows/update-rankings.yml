@@ -1,0 +1,45 @@
+name: Update NFL Power Rankings
+
+on:
+  schedule:
+    # Tuesdays and Wednesdays at 13:00 UTC (~8-9am ET during the season),
+    # safely after Monday Night Football and nflverse's data refresh. Two
+    # runs cover any lag in nflverse publishing that week's data.
+    - cron: "0 13 * * 2,3"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-rankings
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - name: Refresh raw data
+        run: python scripts/fetch_data.py
+
+      - name: Compute power rankings
+        run: python scripts/power_rankings.py
+
+      - name: Render HTML site
+        run: python scripts/generate_html.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/processed docs
+          git diff --cached --quiet && echo "No changes." || git commit -m "Update power rankings [automated]"
+          git push
