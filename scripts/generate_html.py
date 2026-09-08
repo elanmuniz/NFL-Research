@@ -171,14 +171,23 @@ def find_rankings(season):
     return pd.read_csv(latest), week_of(latest)
 
 
+# Rank and Team are frozen in place (position: sticky) as the table scrolls
+# laterally -- these CSS classes give them a fixed left offset (one after
+# the other) so they stack correctly. Widths must stay in sync with the
+# matching `width` rules in STYLE below.
+STICKY_COL_CLASS = {"rank": "sticky-col sticky-col-1", "team": "sticky-col sticky-col-2"}
+
+
 def rankings_table_html(df):
     head_cells = []
     for col, label, _ in RANK_DISPLAY_COLS:
+        classes = [STICKY_COL_CLASS[col]] if col in STICKY_COL_CLASS else []
         tip = COLUMN_TOOLTIPS.get(col)
+        cls_attr = f' class="{" ".join(classes)}"' if classes else ""
         if tip:
-            head_cells.append(f'<th title="{html.escape(tip)}"><span class="has-tip">{label}</span></th>')
+            head_cells.append(f'<th{cls_attr} title="{html.escape(tip)}"><span class="has-tip">{label}</span></th>')
         else:
-            head_cells.append(f"<th>{label}</th>")
+            head_cells.append(f"<th{cls_attr}>{label}</th>")
     head = "".join(head_cells)
     rows = []
     for _, row in df.iterrows():
@@ -189,8 +198,11 @@ def rankings_table_html(df):
                 text = fmt.format(val)
             except (ValueError, TypeError):
                 text = html.escape(str(val))
-            css = ' class="team-cell"' if col == "team" else ""
-            cells.append(f"<td{css}>{text}</td>")
+            classes = [STICKY_COL_CLASS[col]] if col in STICKY_COL_CLASS else []
+            if col == "team":
+                classes.append("team-cell")
+            cls_attr = f' class="{" ".join(classes)}"' if classes else ""
+            cells.append(f"<td{cls_attr}>{text}</td>")
         rows.append(f"<tr>{''.join(cells)}</tr>")
     return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
 
@@ -329,6 +341,7 @@ STYLE = """
     --muted: #9aa1b2;
     --accent: #4f8cff;
     --border: #262b38;
+    --hover-bg: #1a2134;
   }
   @media (prefers-color-scheme: light) {
     :root {
@@ -338,6 +351,7 @@ STYLE = """
       --muted: #5b6472;
       --accent: #2b62d9;
       --border: #e3e6ec;
+      --hover-bg: #eff2fd;
     }
   }
   * { box-sizing: border-box; }
@@ -363,16 +377,33 @@ STYLE = """
   }
   .card h2 { margin-top: 0; font-size: 1.15rem; }
   .muted { color: var(--muted); font-size: 0.85rem; }
-  .table-wrap { overflow-x: auto; }
+  /* overflow: auto (not overflow-x only) makes this a real 2-axis scroll
+     container with a bounded height, so the sticky header (top) and
+     sticky Rank/Team columns (left) below both stick relative to THIS
+     box's own scrollport, consistently, instead of the page's. */
+  .table-wrap { overflow: auto; max-height: 70vh; }
   table { border-collapse: collapse; width: 100%; font-size: 0.85rem; white-space: nowrap; }
   th, td { padding: 0.5rem 0.7rem; text-align: right; border-bottom: 1px solid var(--border); }
   th:first-child, td:first-child { text-align: left; }
   td.team-cell { text-align: left; font-weight: 600; }
-  thead th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+  thead th {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--card-bg); color: var(--muted);
+    font-weight: 600; font-size: 0.75rem; text-transform: uppercase;
+  }
   thead th .has-tip { cursor: help; border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
   thead th .has-tip:hover { color: var(--accent); border-bottom-color: var(--accent); }
-  tbody tr:hover { background: rgba(79, 140, 255, 0.08); }
+  tbody tr:hover { background: var(--hover-bg); }
+  tbody tr:hover .sticky-col { background: var(--hover-bg); }
   .table-hint { margin: 0.6rem 0 0; }
+
+  /* Rank and Team stay put as the table scrolls sideways. Widths are fixed
+     so the second column's left offset is predictable. */
+  .sticky-col { position: sticky; z-index: 1; background: var(--card-bg); }
+  .sticky-col-1 { left: 0; width: 3.25rem; min-width: 3.25rem; }
+  .sticky-col-2 { left: 3.25rem; width: 4.5rem; min-width: 4.5rem; }
+  .sticky-col-2 { box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15); }
+  thead th.sticky-col { z-index: 3; }
   .stat-row { display: flex; gap: 2rem; flex-wrap: wrap; }
   .stat-value { font-size: 2rem; font-weight: 700; color: var(--accent); }
   .stat-label { color: var(--muted); font-size: 0.85rem; max-width: 16rem; }
