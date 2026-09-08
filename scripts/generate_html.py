@@ -414,6 +414,14 @@ STYLE = """
      only ever set border-bottom (no vertical borders), so separate +
      zero spacing renders identically while avoiding that whole bug class. */
   table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.85rem; white-space: nowrap; }
+  /* Gives every row a positioned ancestor for its sticky cells' stacking
+     context -- some WebKit/Safari versions don't reliably out-rank a
+     sticky cell over its later-painted row siblings without this (not
+     needed in Chromium, which is all this repo's testing can exercise).
+     Side effect worth knowing: any future absolutely-positioned content
+     inside a row would anchor to the row, not table-wrap/body -- fine
+     today since nothing here uses position: absolute. */
+  tr { position: relative; }
   th, td { padding: 0.5rem 0.7rem; text-align: right; border-bottom: 1px solid var(--border); }
   th:first-child, td:first-child { text-align: left; }
   td.team-cell { text-align: left; font-weight: 600; }
@@ -421,7 +429,7 @@ STYLE = """
   .diff-neg { color: var(--negative); }
   .diff-zero { color: var(--muted); }
   thead th {
-    position: sticky; top: 0; z-index: 2;
+    position: sticky; top: 0; z-index: 2; will-change: transform;
     background: var(--card-bg); background-clip: padding-box; color: var(--muted);
     font-weight: 600; font-size: 0.75rem; text-transform: uppercase;
   }
@@ -446,8 +454,15 @@ STYLE = """
   .table-hint { margin: 0.6rem 0 0; }
 
   /* Rank and Team stay put as the table scrolls sideways. Widths are fixed
-     so the second column's left offset is predictable. */
-  .sticky-col { position: sticky; z-index: 1; background: var(--card-bg); background-clip: padding-box; }
+     so the second column's left offset is predictable. will-change
+     promotes each sticky cell to its own GPU layer proactively -- guards
+     against a real (Safari/WebKit-only, esp. iOS momentum scroll)
+     compositor lag where a sticky cell's tile briefly renders stale
+     during a fast scroll gesture. Left on permanently rather than
+     toggled around scroll events: correct-but-simpler for a table this
+     small (<=32 rows); toggling would need JS state kept in sync with
+     sort-driven row reordering, not worth it here. */
+  .sticky-col { position: sticky; z-index: 1; will-change: transform; background: var(--card-bg); background-clip: padding-box; }
   .sticky-col-1 { left: 0; width: 3.25rem; min-width: 3.25rem; }
   .sticky-col-2 { left: 3.25rem; width: 4.5rem; min-width: 4.5rem; }
   .sticky-col-2 { box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15); }
