@@ -76,9 +76,6 @@
   .sticky-col-2 { left: 3.25rem; width: 4.5rem; min-width: 4.5rem; }
   .sticky-col-2 { box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15); }
   thead th.sticky-col { z-index: 3; }
-  .stat-row { display: flex; gap: 2rem; flex-wrap: wrap; }
-  .stat-value { font-size: 2rem; font-weight: 700; color: var(--accent); }
-  .stat-label { color: var(--muted); font-size: 0.85rem; max-width: 16rem; }
   .metric-label {
     color: var(--accent); font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.04em; margin: 1rem 0 0.15rem;
@@ -147,9 +144,23 @@
           <p><strong>Caveat:</strong> real DVOA (Football Outsiders/FTN) is a proprietary, licensed metric that weights every play by down, distance, score, and time remaining, using a non-public methodology &mdash; it isn't available in any free dataset, so this project can't reproduce it exactly. Instead we compute each team's raw EPA (Expected Points Added) per play on offense and defense, then run each team's per-game net EPA margin through the <strong>Simple Rating System</strong> (SRS) &mdash; the same least-squares opponent-adjustment idea DVOA is built on, just without the situational weighting. Read <code>adj_epa_rating</code> as directionally DVOA-like, not the real thing.</p>
         </section>
         
+    <section class="card">
+      <h2>Model Weights</h2>
+      <p class="muted">
+        Trained on 96 team-seasons (2023, 2024, 2025), R&sup2; = 0.934
+        predicting average point margin per game.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Metric</th><th>Joint weight (standardized)</th><th>Standalone correlation</th></tr></thead>
+          <tbody><tr><td>adj_epa_rating</td><td>+4.278</td><td>0.96</td></tr><tr><td>success_rate_diff</td><td>+0.917</td><td>0.88</td></tr><tr><td>passer_rating_diff</td><td>+0.567</td><td>0.89</td></tr><tr><td>turnover_margin_pg</td><td>+0.325</td><td>0.62</td></tr><tr><td>ypp_diff</td><td>+0.152</td><td>0.85</td></tr><tr><td>redzone_td_pct_diff</td><td>+0.014</td><td>0.56</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+    
 </main>
 <footer>
-  Generated 2026-09-08 17:00 UTC &middot; data from
+  Generated 2026-09-08 21:24 UTC &middot; data from
   <a href="https://github.com/nflverse/nflverse-data">nflverse-data</a> &middot;
   <a href="https://github.com/elanmuniz/NFL-Research">source</a>
 </footer>

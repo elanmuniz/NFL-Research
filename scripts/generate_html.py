@@ -2,10 +2,11 @@
 Render the current state of the models into static HTML pages for
 GitHub Pages:
   - docs/index.html: the live CURRENT_SEASON power rankings (if the season
-    has produced any completed games yet) plus the evergreen
-    turnover-margin/third-down results and trained model weights.
+    has produced any completed games yet).
   - docs/season-2025.html: the final, full-season 2025 power rankings
     (a completed season, so this page is static once generated).
+  - docs/metrics.html: what each metric means, why it matters, how it's
+    computed, and the trained model weights.
 
 Self-contained (no external CSS/JS) so each page works as a plain static
 file with no build step. Run after power_rankings.py; see
@@ -213,14 +214,6 @@ TABLE_HINT_HTML = (
 )
 
 
-def load_summary():
-    path = os.path.join(PROCESSED_DIR, "summary.json")
-    if not os.path.exists(path):
-        return None
-    with open(path) as f:
-        return json.load(f)
-
-
 def load_weights():
     path = os.path.join(PROCESSED_DIR, "power_ranking_weights.json")
     if not os.path.exists(path):
@@ -298,27 +291,6 @@ def weights_section():
           <thead><tr><th>Metric</th><th>Joint weight (standardized)</th><th>Standalone correlation</th></tr></thead>
           <tbody>{trs}</tbody>
         </table>
-      </div>
-    </section>
-    """
-
-
-def turnover_section():
-    s = load_summary()
-    if s is None:
-        return ""
-    overall = {row["bucket"]: row for row in s["overall"]}
-    won = overall.get("won_margin", {})
-    lost = overall.get("lost_margin", {})
-    return f"""
-    <section class="card">
-      <h2>Background: Turnover Margin vs. Win %</h2>
-      <p class="muted">2023-2025, all games.</p>
-      <div class="stat-row">
-        <div class="stat"><div class="stat-value">{won.get('win_pct', 0):.1f}%</div>
-          <div class="stat-label">Win % when winning the turnover battle</div></div>
-        <div class="stat"><div class="stat-value">{lost.get('win_pct', 0):.1f}%</div>
-          <div class="stat-label">Win % when losing the turnover battle</div></div>
       </div>
     </section>
     """
@@ -404,9 +376,6 @@ STYLE = """
   .sticky-col-2 { left: 3.25rem; width: 4.5rem; min-width: 4.5rem; }
   .sticky-col-2 { box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15); }
   thead th.sticky-col { z-index: 3; }
-  .stat-row { display: flex; gap: 2rem; flex-wrap: wrap; }
-  .stat-value { font-size: 2rem; font-weight: 700; color: var(--accent); }
-  .stat-label { color: var(--muted); font-size: 0.85rem; max-width: 16rem; }
   .metric-label {
     color: var(--accent); font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.04em; margin: 1rem 0 0.15rem;
@@ -465,7 +434,7 @@ def metrics_section():
 
 
 def build_metrics_page():
-    body = metrics_section()
+    body = metrics_section() + weights_section()
     subtitle = ("What each metric in the Power Score model means, why it's a leading "
                 "indicator of winning football, and exactly how it's computed from "
                 "play-by-play data.")
@@ -473,7 +442,7 @@ def build_metrics_page():
 
 
 def build_index_page():
-    body = live_rankings_section() + weights_section() + turnover_section()
+    body = live_rankings_section()
     subtitle = (
         "Ranked on turnover margin, passer rating differential, yards/play &amp; success rate, "
         "red zone efficiency, and an opponent-adjusted (DVOA-style) EPA rating."
