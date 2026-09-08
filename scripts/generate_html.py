@@ -172,11 +172,13 @@ def find_rankings(season):
     return pd.read_csv(latest), week_of(latest)
 
 
-# Rank and Team are frozen in place (position: sticky) as the table scrolls
-# laterally -- these CSS classes give them a fixed left offset (one after
-# the other) so they stack correctly. Widths must stay in sync with the
-# matching `width` rules in STYLE below.
-STICKY_COL_CLASS = {"rank": "sticky-col sticky-col-1", "team": "sticky-col sticky-col-2"}
+# Rank and Team are frozen in place as the table scrolls laterally. They're
+# rendered as their own separate <table> (see rankings_table_html) rather
+# than via position: sticky -- see the comment on .frozen-pane in STYLE for
+# why a second physical table replaced five rounds of sticky-positioning
+# fixes that never actually stopped Safari from painting other columns'
+# text over them.
+FROZEN_COLS = {"rank", "team"}
 
 
 # Columns sorted as text (alphabetical); everything else in RANK_DISPLAY_COLS
@@ -205,53 +207,67 @@ def diff_class(val):
     return "diff-zero"
 
 
-def rankings_table_html(df):
-    head_cells = []
-    for col, label, _ in RANK_DISPLAY_COLS:
-        is_sticky = col in STICKY_COL_CLASS
-        classes = [STICKY_COL_CLASS[col]] if is_sticky else []
-        classes.append("sortable")
+def _table_head_html(cols):
+    cells = []
+    for col, label, _ in cols:
         sort_type = "str" if col in TEXT_SORT_COLS else "num"
         tip = COLUMN_TOOLTIPS.get(col)
-        cls_attr = f' class="{" ".join(classes)}"'
         data_attrs = f' data-col="{col}" data-type="{sort_type}"'
         label_html = f'<span class="has-tip">{label}</span>' if tip else label
         title_attr = f' title="{html.escape(tip)}"' if tip else ""
         inner = f'<span class="th-inner">{label_html}<span class="sort-arrow"></span></span>'
-        # Sticky columns render their visible content inside a plain <div>
-        # wrapper (.sticky-inner), not directly in the <th>/<td> -- see the
-        # CSS comment on .sticky-inner for why: native table cells have
-        # long-documented cross-browser stacking/paint-order quirks that a
-        # plain block div doesn't, and every previous fix that kept the
-        # frozen columns' background/z-index directly on the table cell
-        # failed to actually stop other columns' content from painting
-        # over them during horizontal scroll on Safari.
-        if is_sticky:
-            inner = f'<div class="sticky-inner">{inner}</div>'
-        head_cells.append(f'<th{cls_attr}{data_attrs}{title_attr}>{inner}</th>')
-    head = "".join(head_cells)
+        cells.append(f'<th class="sortable"{data_attrs}{title_attr}>{inner}</th>')
+    return f'<thead><tr>{"".join(cells)}</tr></thead>'
+
+
+def _table_body_html(df, cols):
     rows = []
     for _, row in df.iterrows():
+        # data-row-id links this row to its counterpart in the other pane's
+        # table, so a sort triggered from either pane can reorder both --
+        # see PANE_SYNC_SCRIPT/SORT_SCRIPT.
+        row_id = html.escape(str(row["team"]))
         cells = []
-        for col, _, fmt in RANK_DISPLAY_COLS:
+        for col, _, fmt in cols:
             val = row[col]
             try:
                 text = fmt.format(val)
             except (ValueError, TypeError):
                 text = html.escape(str(val))
-            is_sticky = col in STICKY_COL_CLASS
-            classes = [STICKY_COL_CLASS[col]] if is_sticky else []
+            classes = []
             if col == "team":
                 classes.append("team-cell")
             if col in SIGNED_DIFF_COLS:
                 classes.append(diff_class(val))
             cls_attr = f' class="{" ".join(classes)}"' if classes else ""
             sort_val = html.escape(str(val))
-            cell_html = f'<div class="sticky-inner">{text}</div>' if is_sticky else text
-            cells.append(f'<td{cls_attr} data-sort="{sort_val}">{cell_html}</td>')
-        rows.append(f"<tr>{''.join(cells)}</tr>")
-    return (f'<table class="sortable-table"><thead><tr>{head}</tr></thead>'
-            f'<tbody>{"".join(rows)}</tbody></table>')
+            cells.append(f'<td{cls_attr} data-sort="{sort_val}">{text}</td>')
+        rows.append(f'<tr data-row-id="{row_id}">{"".join(cells)}</tr>')
+    return f'<tbody>{"".join(rows)}</tbody>'
+
+
+def rankings_table_html(df):
+    frozen_cols = [c for c in RANK_DISPLAY_COLS if c[0] in FROZEN_COLS]
+    scroll_cols = [c for c in RANK_DISPLAY_COLS if c[0] not in FROZEN_COLS]
+    frozen_table = (
+        f'<table class="sortable-table frozen-table">'
+        f'{_table_head_html(frozen_cols)}{_table_body_html(df, frozen_cols)}</table>'
+    )
+    scroll_table = (
+        f'<table class="sortable-table scroll-table">'
+        f'{_table_head_html(scroll_cols)}{_table_body_html(df, scroll_cols)}</table>'
+    )
+    # Two physically separate tables, not one table with sticky-positioned
+    # columns -- see the comment on .frozen-pane in STYLE for why. The
+    # frozen pane (Rank/Team) never scrolls horizontally at all and has no
+    # overlapping content to paint over it; only its vertical scroll
+    # position is mirrored from the scroll pane, via PANE_SYNC_SCRIPT.
+    return (
+        f'<div class="rankings-wrap">'
+        f'<div class="frozen-pane">{frozen_table}</div>'
+        f'<div class="scroll-pane">{scroll_table}</div>'
+        f'</div>'
+    )
 
 
 TABLE_HINT_HTML = (
@@ -284,7 +300,7 @@ def live_rankings_section():
     return f"""
     <section class="card">
       <h2>{CURRENT_SEASON} Power Rankings <span class="muted">&mdash; through week {week}</span></h2>
-      <div class="table-wrap">{rankings_table_html(df)}</div>
+      {rankings_table_html(df)}
       {TABLE_HINT_HTML}
     </section>
     """
@@ -308,7 +324,7 @@ def final_season_section(season):
         Full {games}-game regular season (through week {week}). Same model as the live
         {CURRENT_SEASON} rankings, weights trained on 2023-2025 team-seasons.
       </p>
-      <div class="table-wrap">{rankings_table_html(df)}</div>
+      {rankings_table_html(df)}
       {TABLE_HINT_HTML}
     </section>
     """
@@ -413,21 +429,8 @@ STYLE = """
   }
   .card h2 { margin-top: 0; font-size: 1.15rem; }
   .muted { color: var(--muted); font-size: 0.85rem; }
-  /* overflow: auto (not overflow-x only) makes this a real 2-axis scroll
-     container with a bounded height, so the native-sticky header (top)
-     sticks relative to THIS box's own scrollport, consistently, instead
-     of the page's. The Rank/Team columns' horizontal freeze no longer
-     depends on this element being a sticky containing block -- it's
-     JS-driven (see STICKY_SCROLL_SCRIPT) -- but this element's `scroll`
-     event is what that script listens to, so it still has to be the
-     actual scrolling element. */
+  /* Used only by the plain (non-rankings) weights table. */
   .table-wrap { overflow: auto; max-height: 70vh; }
-  /* border-collapse: separate (not collapse) -- collapsed borders and
-     position: sticky don't composite reliably together in every browser
-     (most notably Safari): the sticky cell's background can fail to
-     paint opaque, letting scrolled-under text show through/overlap. We
-     only ever set border-bottom (no vertical borders), so separate +
-     zero spacing renders identically while avoiding that whole bug class. */
   table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.85rem; white-space: nowrap; }
   th, td { padding: 0.5rem 0.7rem; text-align: right; border-bottom: 1px solid var(--border); }
   th:first-child, td:first-child { text-align: left; }
@@ -449,74 +452,50 @@ STYLE = """
   th .sort-arrow::before { content: ""; }
   th.sort-asc .sort-arrow::before { content: "\\25B2"; color: var(--accent); }
   th.sort-desc .sort-arrow::before { content: "\\25BC"; color: var(--accent); }
-  /* Zebra striping. The frozen columns' actual paint surface is
-     .sticky-inner now (see below), so that's what needs the stripe/hover
-     tint re-applied -- not the <td>/<th> itself, which no longer paints
-     any visible background of its own. Hover declared after, so it wins
-     over the stripe on the same row. */
+  /* Hover declared after nth-child, so it wins over the stripe on the
+     same row. Both rules match the frozen table's rows too. */
   tbody tr:nth-child(even) { background: var(--stripe-bg); }
-  tbody tr:nth-child(even) .sticky-inner { background: var(--stripe-bg); }
   tbody tr:hover { background: var(--hover-bg); }
-  tbody tr:hover .sticky-inner { background: var(--hover-bg); }
   .table-hint { margin: 0.6rem 0 0; }
 
-  /* Rank and Team stay put as the table scrolls sideways. History: three
-     rounds of fixes that kept the frozen columns' background/z-index
-     directly on the <td>/<th> itself -- border-collapse, background-clip,
-     will-change, then a JS-driven `transform` replacing native sticky
-     entirely -- all failed to stop other columns' content from visibly
-     painting over the frozen ones during horizontal scroll on macOS
-     Safari, confirmed by repeated user testing. That pattern (correct
-     geometry and opacity by every measurement available in this
-     environment, still broken specifically in Safari) points at
-     something more fundamental than repaint timing: native <td>/<th>
-     boxes have long-documented cross-browser inconsistencies in how
-     z-index/stacking applies to them at all, which no amount of
-     will-change or forced-repaint hinting can work around because the
-     problem was never repaint timing to begin with.
+  /* Rank/Team ("frozen") vs. the rest of the columns ("scroll"): rendered
+     as two entirely separate <table> elements (see rankings_table_html),
+     not one table with position: sticky columns. History: five rounds of
+     fixes that kept the frozen columns overlapping the scrolling ones in
+     the SAME table -- border-collapse, background-clip, will-change, a
+     JS-driven transform replacing native sticky, then moving the paint
+     surface onto a plain absolutely-positioned div -- each closed off one
+     specific compositing/stacking theory and each still left other
+     columns' text visibly painting over Rank/Team during horizontal
+     scroll on macOS Safari, confirmed by repeated user testing. That
+     pattern (every fix verifiably correct by geometry/opacity/z-index,
+     still broken on the one browser that could never be tested directly
+     in this environment) means the bug lived in overlapping content
+     sharing one scroll/stacking context, not in any single property.
 
-     Fix: the frozen columns' entire visible surface -- background, text,
-     z-index, the JS-driven transform -- now lives on .sticky-inner, a
-     plain <div> absolutely positioned to fill its <td>/<th> (`inset: 0`
-     sizes it to the cell's padding box, which is why padding moves here
-     from the cell). A plain block div has simple, universally-consistent
-     stacking behavior; it was never a table-cell-stacking bug to begin
-     with. The outer <td>/<th> keeps only what's needed for table layout
-     (width, the border-bottom row line) and is otherwise an invisible
-     placeholder -- `position: relative` on it (tbody-scoped, see below)
-     just gives its .sticky-inner a positioning anchor. */
-  .sticky-col { padding: 0; }
-  tbody .sticky-col { position: relative; }
-  .sticky-inner {
-    position: absolute; inset: 0; z-index: 1; overflow: hidden;
-    padding: 0.5rem 0.7rem;
-    background: var(--card-bg); background-clip: padding-box;
+     Fix: don't overlap at all. Two independent tables side by side, only
+     the frozen one's vertical scroll position mirrored from the other via
+     JS (PANE_SYNC_SCRIPT) -- there is no shared stacking context left for
+     a browser's table-rendering quirks to get wrong. */
+  .rankings-wrap { display: flex; max-height: 70vh; }
+  .frozen-pane {
+    flex: 0 0 auto; overflow: hidden; max-height: 70vh;
+    box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15);
   }
-  /* thead th is already `position: sticky` (see above) -- a valid
-     containing block for .sticky-inner's `position: absolute` on its
-     own, so it needs nothing extra here. Scoping .sticky-col's own
-     `position: relative` to tbody only (not a bare `.sticky-col` rule)
-     is deliberate: a bare class selector has higher specificity than
-     thead th's type selectors and would silently override (not compose
-     with) its `position: sticky`, breaking the header's *vertical*
-     stickiness for just the Rank/Team corner cells -- caught this
-     exact regression once already in an earlier round of this fix. */
-  .sticky-col-1 { width: 3.25rem; min-width: 3.25rem; }
-  .sticky-col-2 { width: 4.5rem; min-width: 4.5rem; }
-  .sticky-col-2 .sticky-inner { box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15); }
-  /* z-index has to go on the outer <th> here, NOT (only) on .sticky-inner:
-     every thead th is already `position: sticky`, i.e. already positioned,
-     so th-vs-th paint order among header cells is decided by z-index
-     comparison at the <th> level, in the stacking context they share as
-     siblings -- z-index on .sticky-inner alone only ranks it among its
-     OWN siblings inside that one <th> (it has none), so it does nothing
-     to rank this <th> above the next one. Without this, every header
-     cell ties at thead th's shared z-index: 2 and the tie breaks in DOM
-     order, so later columns paint over Rank/Team during horizontal
-     scroll -- caught this exact break in the screenshot check right
-     after first writing this rule as `thead .sticky-inner { z-index: 3 }`
-     only. */
-  thead th.sticky-col { z-index: 3; }
+  .scroll-pane { flex: 1 1 auto; min-width: 0; overflow: auto; max-height: 70vh; }
+  .frozen-table { width: auto; }
+  .scroll-table { width: auto; min-width: 100%; }
+  .frozen-table th:first-child, .frozen-table td:first-child {
+    width: 3.25rem; min-width: 3.25rem; text-align: left;
+  }
+  .frozen-table th:last-child, .frozen-table td:last-child {
+    width: 4.5rem; min-width: 4.5rem;
+  }
+  /* The generic th:first-child/td:first-child left-align rule (for the
+     weights table's "Metric" column) would otherwise also catch the
+     scroll table's first column (GP, numeric) since it's a first-child
+     too -- override it back to the default right alignment. */
+  .scroll-table th:first-child, .scroll-table td:first-child { text-align: right; }
   .metric-label {
     color: var(--accent); font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.04em; margin: 1rem 0 0.15rem;
@@ -542,79 +521,94 @@ STYLE = """
 # Click a column header to sort the rankings table by that metric; click
 # again to flip direction. Numeric columns default to descending (best
 # value first, matching "rank 1 = best"); the Team column defaults to
-# ascending (A-Z). Sorting reorders <tr> elements in place -- the sticky
-# columns/header and hover styling are plain CSS on those same elements,
-# so they keep working after a re-sort with no extra code.
+# ascending (A-Z). The rankings pages now split Rank/Team into a separate
+# "frozen" <table> from the rest of the columns' "scroll" <table> (see
+# rankings_table_html/.rankings-wrap) -- so a sort click in either table
+# has to reorder its own <tbody> AND the other table's <tbody> to match,
+# using each <tr>'s data-row-id (team abbreviation) to find its
+# counterpart row. Grouping by the shared .rankings-wrap/.table-wrap
+# ancestor is what finds that counterpart; a wrap with only one table
+# (e.g. the weights table) just does nothing extra.
 SORT_SCRIPT = """
-document.querySelectorAll('table.sortable-table').forEach(function (table) {
-  var thead = table.tHead;
-  var tbody = table.tBodies[0];
-  if (!thead || !tbody) return;
+document.querySelectorAll('.rankings-wrap, .table-wrap').forEach(function (wrap) {
+  var tables = Array.prototype.slice.call(wrap.querySelectorAll('table.sortable-table'));
+  if (!tables.length) return;
 
-  thead.querySelectorAll('th.sortable').forEach(function (th) {
-    th.addEventListener('click', function () {
-      var idx = th.cellIndex;
-      var type = th.dataset.type;
-      var wasAsc = th.classList.contains('sort-asc');
-      var wasDesc = th.classList.contains('sort-desc');
-      // First click: text and "rank" (where lower is better) start ascending;
-      // every other numeric metric (where higher is better) starts descending.
-      var ascFirst = type === 'str' || th.dataset.col === 'rank';
-      var dir = wasAsc ? 'desc' : wasDesc ? 'asc' : (ascFirst ? 'asc' : 'desc');
+  function reorder(table, rowIds) {
+    var tbody = table.tBodies[0];
+    if (!tbody) return;
+    var byId = {};
+    Array.prototype.slice.call(tbody.rows).forEach(function (row) {
+      byId[row.dataset.rowId] = row;
+    });
+    rowIds.forEach(function (id) {
+      var row = byId[id];
+      if (row) tbody.appendChild(row);
+    });
+  }
 
-      thead.querySelectorAll('th').forEach(function (h) {
-        h.classList.remove('sort-asc', 'sort-desc');
+  tables.forEach(function (table) {
+    var thead = table.tHead;
+    var tbody = table.tBodies[0];
+    if (!thead || !tbody) return;
+
+    thead.querySelectorAll('th.sortable').forEach(function (th) {
+      th.addEventListener('click', function () {
+        var idx = th.cellIndex;
+        var type = th.dataset.type;
+        var wasAsc = th.classList.contains('sort-asc');
+        var wasDesc = th.classList.contains('sort-desc');
+        // First click: text and "rank" (where lower is better) start ascending;
+        // every other numeric metric (where higher is better) starts descending.
+        var ascFirst = type === 'str' || th.dataset.col === 'rank';
+        var dir = wasAsc ? 'desc' : wasDesc ? 'asc' : (ascFirst ? 'asc' : 'desc');
+
+        tables.forEach(function (t) {
+          t.tHead.querySelectorAll('th').forEach(function (h) {
+            h.classList.remove('sort-asc', 'sort-desc');
+          });
+        });
+        th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+
+        var rows = Array.prototype.slice.call(tbody.rows);
+        rows.sort(function (a, b) {
+          var av = a.cells[idx].dataset.sort;
+          var bv = b.cells[idx].dataset.sort;
+          var cmp;
+          if (type === 'str') {
+            cmp = av.localeCompare(bv);
+          } else {
+            cmp = parseFloat(av) - parseFloat(bv);
+          }
+          return dir === 'asc' ? cmp : -cmp;
+        });
+        rows.forEach(function (row) { tbody.appendChild(row); });
+
+        var rowIds = rows.map(function (row) { return row.dataset.rowId; });
+        tables.forEach(function (t) {
+          if (t !== table) reorder(t, rowIds);
+        });
       });
-      th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
-
-      var rows = Array.prototype.slice.call(tbody.rows);
-      rows.sort(function (a, b) {
-        var av = a.cells[idx].dataset.sort;
-        var bv = b.cells[idx].dataset.sort;
-        var cmp;
-        if (type === 'str') {
-          cmp = av.localeCompare(bv);
-        } else {
-          cmp = parseFloat(av) - parseFloat(bv);
-        }
-        return dir === 'asc' ? cmp : -cmp;
-      });
-      rows.forEach(function (row) { tbody.appendChild(row); });
     });
   });
 });
 """
 
 
-# Freezes the Rank/Team columns as .table-wrap scrolls sideways, by JS
-# instead of native `position: sticky; left:` -- see the comment on
-# .sticky-inner in STYLE for the full history/reasoning. Targets
-# .sticky-inner (the plain-div paint surface each frozen cell's content
-# now lives in -- see rankings_table_html()), not the <td>/<th> itself.
-# translateX(scrollLeft) shifts each inner div by exactly the amount
-# scrolled, which cancels the scroll and leaves it exactly where it
-# started (its normal, unscrolled position) -- doesn't hardcode either
-# column's width/offset, works for however many/wide the frozen columns
-# are.
-STICKY_SCROLL_SCRIPT = """
-document.querySelectorAll('.table-wrap').forEach(function (wrap) {
-  var stickyEls = wrap.querySelectorAll('.sticky-inner');
-  if (!stickyEls.length) return;
-  var ticking = false;
-  function apply() {
-    var x = wrap.scrollLeft;
-    stickyEls.forEach(function (el) {
-      el.style.transform = 'translateX(' + x + 'px)';
-    });
-    ticking = false;
-  }
-  wrap.addEventListener('scroll', function () {
-    if (!ticking) {
-      ticking = true;
-      requestAnimationFrame(apply);
-    }
+# Mirrors the frozen pane's vertical scroll position to match the scroll
+# pane's, since only the scroll pane is natively scrolled (by the user or
+# a trackpad/wheel event) -- the frozen pane's own scrollTop is set here in
+# response, not scrolled directly. See the comment on .rankings-wrap in
+# STYLE for why Rank/Team live in a wholly separate table rather than as
+# sticky-positioned columns of one table.
+PANE_SYNC_SCRIPT = """
+document.querySelectorAll('.rankings-wrap').forEach(function (wrap) {
+  var frozen = wrap.querySelector('.frozen-pane');
+  var scroll = wrap.querySelector('.scroll-pane');
+  if (!frozen || !scroll) return;
+  scroll.addEventListener('scroll', function () {
+    frozen.scrollTop = scroll.scrollTop;
   }, { passive: true });
-  apply();
 });
 """
 
@@ -644,7 +638,7 @@ def page_shell(active_file, title, subtitle, body_html):
   <a href="https://github.com/{os.environ.get('GITHUB_REPOSITORY', 'elanmuniz/NFL-Research')}">source</a>
 </footer>
 <script>{SORT_SCRIPT}</script>
-<script>{STICKY_SCROLL_SCRIPT}</script>
+<script>{PANE_SYNC_SCRIPT}</script>
 </body>
 </html>
 """
