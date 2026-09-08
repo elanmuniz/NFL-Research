@@ -65,6 +65,13 @@
   }
   thead th .has-tip { cursor: help; border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
   thead th .has-tip:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  thead th.sortable { cursor: pointer; user-select: none; }
+  thead th.sortable:hover { color: var(--accent); }
+  th .th-inner { display: inline-flex; align-items: center; gap: 0.3rem; }
+  th .sort-arrow { font-size: 0.6rem; color: var(--muted); width: 0.7em; display: inline-block; }
+  th .sort-arrow::before { content: ""; }
+  th.sort-asc .sort-arrow::before { content: "\25B2"; color: var(--accent); }
+  th.sort-desc .sort-arrow::before { content: "\25BC"; color: var(--accent); }
   tbody tr:hover { background: var(--hover-bg); }
   tbody tr:hover .sticky-col { background: var(--hover-bg); }
   .table-hint { margin: 0.6rem 0 0; }
@@ -160,9 +167,48 @@
     
 </main>
 <footer>
-  Generated 2026-09-08 21:24 UTC &middot; data from
+  Generated 2026-09-08 21:37 UTC &middot; data from
   <a href="https://github.com/nflverse/nflverse-data">nflverse-data</a> &middot;
   <a href="https://github.com/elanmuniz/NFL-Research">source</a>
 </footer>
+<script>
+document.querySelectorAll('table.sortable-table').forEach(function (table) {
+  var thead = table.tHead;
+  var tbody = table.tBodies[0];
+  if (!thead || !tbody) return;
+
+  thead.querySelectorAll('th.sortable').forEach(function (th) {
+    th.addEventListener('click', function () {
+      var idx = th.cellIndex;
+      var type = th.dataset.type;
+      var wasAsc = th.classList.contains('sort-asc');
+      var wasDesc = th.classList.contains('sort-desc');
+      // First click: text and "rank" (where lower is better) start ascending;
+      // every other numeric metric (where higher is better) starts descending.
+      var ascFirst = type === 'str' || th.dataset.col === 'rank';
+      var dir = wasAsc ? 'desc' : wasDesc ? 'asc' : (ascFirst ? 'asc' : 'desc');
+
+      thead.querySelectorAll('th').forEach(function (h) {
+        h.classList.remove('sort-asc', 'sort-desc');
+      });
+      th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+
+      var rows = Array.prototype.slice.call(tbody.rows);
+      rows.sort(function (a, b) {
+        var av = a.cells[idx].dataset.sort;
+        var bv = b.cells[idx].dataset.sort;
+        var cmp;
+        if (type === 'str') {
+          cmp = av.localeCompare(bv);
+        } else {
+          cmp = parseFloat(av) - parseFloat(bv);
+        }
+        return dir === 'asc' ? cmp : -cmp;
+      });
+      rows.forEach(function (row) { tbody.appendChild(row); });
+    });
+  });
+});
+</script>
 </body>
 </html>

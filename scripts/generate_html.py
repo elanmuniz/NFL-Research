@@ -179,16 +179,26 @@ def find_rankings(season):
 STICKY_COL_CLASS = {"rank": "sticky-col sticky-col-1", "team": "sticky-col sticky-col-2"}
 
 
+# Columns sorted as text (alphabetical); everything else in RANK_DISPLAY_COLS
+# sorts numerically on its underlying (unformatted) value.
+TEXT_SORT_COLS = {"team"}
+
+
 def rankings_table_html(df):
     head_cells = []
     for col, label, _ in RANK_DISPLAY_COLS:
         classes = [STICKY_COL_CLASS[col]] if col in STICKY_COL_CLASS else []
+        classes.append("sortable")
+        sort_type = "str" if col in TEXT_SORT_COLS else "num"
         tip = COLUMN_TOOLTIPS.get(col)
-        cls_attr = f' class="{" ".join(classes)}"' if classes else ""
-        if tip:
-            head_cells.append(f'<th{cls_attr} title="{html.escape(tip)}"><span class="has-tip">{label}</span></th>')
-        else:
-            head_cells.append(f"<th{cls_attr}>{label}</th>")
+        cls_attr = f' class="{" ".join(classes)}"'
+        data_attrs = f' data-col="{col}" data-type="{sort_type}"'
+        label_html = f'<span class="has-tip">{label}</span>' if tip else label
+        title_attr = f' title="{html.escape(tip)}"' if tip else ""
+        head_cells.append(
+            f'<th{cls_attr}{data_attrs}{title_attr}>'
+            f'<span class="th-inner">{label_html}<span class="sort-arrow"></span></span></th>'
+        )
     head = "".join(head_cells)
     rows = []
     for _, row in df.iterrows():
@@ -203,9 +213,11 @@ def rankings_table_html(df):
             if col == "team":
                 classes.append("team-cell")
             cls_attr = f' class="{" ".join(classes)}"' if classes else ""
-            cells.append(f"<td{cls_attr}>{text}</td>")
+            sort_val = html.escape(str(val))
+            cells.append(f'<td{cls_attr} data-sort="{sort_val}">{text}</td>')
         rows.append(f"<tr>{''.join(cells)}</tr>")
-    return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
+    return (f'<table class="sortable-table"><thead><tr>{head}</tr></thead>'
+            f'<tbody>{"".join(rows)}</tbody></table>')
 
 
 TABLE_HINT_HTML = (
@@ -365,6 +377,13 @@ STYLE = """
   }
   thead th .has-tip { cursor: help; border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
   thead th .has-tip:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  thead th.sortable { cursor: pointer; user-select: none; }
+  thead th.sortable:hover { color: var(--accent); }
+  th .th-inner { display: inline-flex; align-items: center; gap: 0.3rem; }
+  th .sort-arrow { font-size: 0.6rem; color: var(--muted); width: 0.7em; display: inline-block; }
+  th .sort-arrow::before { content: ""; }
+  th.sort-asc .sort-arrow::before { content: "\\25B2"; color: var(--accent); }
+  th.sort-desc .sort-arrow::before { content: "\\25BC"; color: var(--accent); }
   tbody tr:hover { background: var(--hover-bg); }
   tbody tr:hover .sticky-col { background: var(--hover-bg); }
   .table-hint { margin: 0.6rem 0 0; }
@@ -384,6 +403,53 @@ STYLE = """
   .card p:not(.metric-label):not(.muted) { margin: 0 0 0.5rem; line-height: 1.5; }
   footer { max-width: 1000px; margin: 0 auto; padding: 0 1.25rem 2rem; color: var(--muted); font-size: 0.8rem; }
   a { color: var(--accent); }
+"""
+
+
+# Click a column header to sort the rankings table by that metric; click
+# again to flip direction. Numeric columns default to descending (best
+# value first, matching "rank 1 = best"); the Team column defaults to
+# ascending (A-Z). Sorting reorders <tr> elements in place -- the sticky
+# columns/header and hover styling are plain CSS on those same elements,
+# so they keep working after a re-sort with no extra code.
+SORT_SCRIPT = """
+document.querySelectorAll('table.sortable-table').forEach(function (table) {
+  var thead = table.tHead;
+  var tbody = table.tBodies[0];
+  if (!thead || !tbody) return;
+
+  thead.querySelectorAll('th.sortable').forEach(function (th) {
+    th.addEventListener('click', function () {
+      var idx = th.cellIndex;
+      var type = th.dataset.type;
+      var wasAsc = th.classList.contains('sort-asc');
+      var wasDesc = th.classList.contains('sort-desc');
+      // First click: text and "rank" (where lower is better) start ascending;
+      // every other numeric metric (where higher is better) starts descending.
+      var ascFirst = type === 'str' || th.dataset.col === 'rank';
+      var dir = wasAsc ? 'desc' : wasDesc ? 'asc' : (ascFirst ? 'asc' : 'desc');
+
+      thead.querySelectorAll('th').forEach(function (h) {
+        h.classList.remove('sort-asc', 'sort-desc');
+      });
+      th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+
+      var rows = Array.prototype.slice.call(tbody.rows);
+      rows.sort(function (a, b) {
+        var av = a.cells[idx].dataset.sort;
+        var bv = b.cells[idx].dataset.sort;
+        var cmp;
+        if (type === 'str') {
+          cmp = av.localeCompare(bv);
+        } else {
+          cmp = parseFloat(av) - parseFloat(bv);
+        }
+        return dir === 'asc' ? cmp : -cmp;
+      });
+      rows.forEach(function (row) { tbody.appendChild(row); });
+    });
+  });
+});
 """
 
 
@@ -411,6 +477,7 @@ def page_shell(active_file, title, subtitle, body_html):
   <a href="https://github.com/nflverse/nflverse-data">nflverse-data</a> &middot;
   <a href="https://github.com/{os.environ.get('GITHUB_REPOSITORY', 'elanmuniz/NFL-Research')}">source</a>
 </footer>
+<script>{SORT_SCRIPT}</script>
 </body>
 </html>
 """
