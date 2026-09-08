@@ -103,47 +103,73 @@
   th .sort-arrow::before { content: ""; }
   th.sort-asc .sort-arrow::before { content: "\25B2"; color: var(--accent); }
   th.sort-desc .sort-arrow::before { content: "\25BC"; color: var(--accent); }
-  /* Zebra striping. Sticky cells carry their own opaque background (needed
-     to mask content scrolling underneath), so an even row's stripe must be
-     re-applied to its sticky cells explicitly or a seam appears once the
-     table is scrolled horizontally. Hover is declared after, so it always
-     wins over the stripe on the same row. */
+  /* Zebra striping. The frozen columns' actual paint surface is
+     .sticky-inner now (see below), so that's what needs the stripe/hover
+     tint re-applied -- not the <td>/<th> itself, which no longer paints
+     any visible background of its own. Hover declared after, so it wins
+     over the stripe on the same row. */
   tbody tr:nth-child(even) { background: var(--stripe-bg); }
-  tbody tr:nth-child(even) .sticky-col { background: var(--stripe-bg); }
+  tbody tr:nth-child(even) .sticky-inner { background: var(--stripe-bg); }
   tbody tr:hover { background: var(--hover-bg); }
-  tbody tr:hover .sticky-col { background: var(--hover-bg); }
+  tbody tr:hover .sticky-inner { background: var(--hover-bg); }
   .table-hint { margin: 0.6rem 0 0; }
 
-  /* Rank and Team stay put as the table scrolls sideways -- but NOT via
-     native `position: sticky; left:`. Two rounds of Safari-specific CSS
-     hardening (border-collapse, background-clip, will-change) failed to
-     fix confirmed repaint/ghosting bugs on macOS Safari during horizontal
-     scroll, so this drops native sticky for the horizontal axis entirely
-     and drives it with JS instead (STICKY_SCROLL_SCRIPT below): on every
-     scroll of .table-wrap, it sets `transform: translateX(scrollLeft)`
-     directly on these cells. A transform write is something no browser
-     can get away with not repainting -- unlike sticky positioning, which
-     depends on the browser's own (evidently buggy, in this case)
-     scroll-triggered relayout/repaint logic. `position: relative` (not
-     sticky) here is just so z-index keeps applying predictably; it plays
-     no role in the actual freezing, which is 100% the JS transform.
-     thead th keeps native `position: sticky; top: 0` for the header's
-     *vertical* stickiness (unaffected -- only horizontal scroll was ever
-     reported as buggy), composed with the same JS-driven horizontal
-     transform on its Rank/Team corner cells via the shared class.
-     Important: `position: relative` below is scoped to `tbody
-     .sticky-col` specifically, NOT the bare `.sticky-col` class --
-     a bare class selector has higher specificity than `thead th`'s type
-     selectors and would silently override (not compose with) thead th's
-     `position: sticky`, breaking the header's vertical stickiness for
-     just the Rank/Team corner cells. (Caught this in the screenshot
-     regression check before shipping -- worth the explicit comment since
-     it's an easy mistake to reintroduce.) */
-  .sticky-col { z-index: 1; background: var(--card-bg); background-clip: padding-box; }
+  /* Rank and Team stay put as the table scrolls sideways. History: three
+     rounds of fixes that kept the frozen columns' background/z-index
+     directly on the <td>/<th> itself -- border-collapse, background-clip,
+     will-change, then a JS-driven `transform` replacing native sticky
+     entirely -- all failed to stop other columns' content from visibly
+     painting over the frozen ones during horizontal scroll on macOS
+     Safari, confirmed by repeated user testing. That pattern (correct
+     geometry and opacity by every measurement available in this
+     environment, still broken specifically in Safari) points at
+     something more fundamental than repaint timing: native <td>/<th>
+     boxes have long-documented cross-browser inconsistencies in how
+     z-index/stacking applies to them at all, which no amount of
+     will-change or forced-repaint hinting can work around because the
+     problem was never repaint timing to begin with.
+
+     Fix: the frozen columns' entire visible surface -- background, text,
+     z-index, the JS-driven transform -- now lives on .sticky-inner, a
+     plain <div> absolutely positioned to fill its <td>/<th> (`inset: 0`
+     sizes it to the cell's padding box, which is why padding moves here
+     from the cell). A plain block div has simple, universally-consistent
+     stacking behavior; it was never a table-cell-stacking bug to begin
+     with. The outer <td>/<th> keeps only what's needed for table layout
+     (width, the border-bottom row line) and is otherwise an invisible
+     placeholder -- `position: relative` on it (tbody-scoped, see below)
+     just gives its .sticky-inner a positioning anchor. */
+  .sticky-col { padding: 0; }
   tbody .sticky-col { position: relative; }
+  .sticky-inner {
+    position: absolute; inset: 0; z-index: 1; overflow: hidden;
+    padding: 0.5rem 0.7rem;
+    background: var(--card-bg); background-clip: padding-box;
+  }
+  /* thead th is already `position: sticky` (see above) -- a valid
+     containing block for .sticky-inner's `position: absolute` on its
+     own, so it needs nothing extra here. Scoping .sticky-col's own
+     `position: relative` to tbody only (not a bare `.sticky-col` rule)
+     is deliberate: a bare class selector has higher specificity than
+     thead th's type selectors and would silently override (not compose
+     with) its `position: sticky`, breaking the header's *vertical*
+     stickiness for just the Rank/Team corner cells -- caught this
+     exact regression once already in an earlier round of this fix. */
   .sticky-col-1 { width: 3.25rem; min-width: 3.25rem; }
   .sticky-col-2 { width: 4.5rem; min-width: 4.5rem; }
-  .sticky-col-2 { box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15); }
+  .sticky-col-2 .sticky-inner { box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15); }
+  /* z-index has to go on the outer <th> here, NOT (only) on .sticky-inner:
+     every thead th is already `position: sticky`, i.e. already positioned,
+     so th-vs-th paint order among header cells is decided by z-index
+     comparison at the <th> level, in the stacking context they share as
+     siblings -- z-index on .sticky-inner alone only ranks it among its
+     OWN siblings inside that one <th> (it has none), so it does nothing
+     to rank this <th> above the next one. Without this, every header
+     cell ties at thead th's shared z-index: 2 and the tie breaks in DOM
+     order, so later columns paint over Rank/Team during horizontal
+     scroll -- caught this exact break in the screenshot check right
+     after first writing this rule as `thead .sticky-inner { z-index: 3 }`
+     only. */
   thead th.sticky-col { z-index: 3; }
   .metric-label {
     color: var(--accent); font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
@@ -184,7 +210,7 @@
         
 </main>
 <footer>
-  Generated 2026-09-08 22:40 UTC &middot; data from
+  Generated 2026-09-08 22:54 UTC &middot; data from
   <a href="https://github.com/nflverse/nflverse-data">nflverse-data</a> &middot;
   <a href="https://github.com/elanmuniz/NFL-Research">source</a>
 </footer>
@@ -229,7 +255,7 @@ document.querySelectorAll('table.sortable-table').forEach(function (table) {
 </script>
 <script>
 document.querySelectorAll('.table-wrap').forEach(function (wrap) {
-  var stickyEls = wrap.querySelectorAll('.sticky-col-1, .sticky-col-2');
+  var stickyEls = wrap.querySelectorAll('.sticky-inner');
   if (!stickyEls.length) return;
   var ticking = false;
   function apply() {
