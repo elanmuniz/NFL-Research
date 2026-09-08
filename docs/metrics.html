@@ -72,7 +72,13 @@
      sticky Rank/Team columns (left) below both stick relative to THIS
      box's own scrollport, consistently, instead of the page's. */
   .table-wrap { overflow: auto; max-height: 70vh; }
-  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; white-space: nowrap; }
+  /* border-collapse: separate (not collapse) -- collapsed borders and
+     position: sticky don't composite reliably together in every browser
+     (most notably Safari): the sticky cell's background can fail to
+     paint opaque, letting scrolled-under text show through/overlap. We
+     only ever set border-bottom (no vertical borders), so separate +
+     zero spacing renders identically while avoiding that whole bug class. */
+  table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.85rem; white-space: nowrap; }
   th, td { padding: 0.5rem 0.7rem; text-align: right; border-bottom: 1px solid var(--border); }
   th:first-child, td:first-child { text-align: left; }
   td.team-cell { text-align: left; font-weight: 600; }
@@ -81,7 +87,7 @@
   .diff-zero { color: var(--muted); }
   thead th {
     position: sticky; top: 0; z-index: 2;
-    background: var(--card-bg); color: var(--muted);
+    background: var(--card-bg); background-clip: padding-box; color: var(--muted);
     font-weight: 600; font-size: 0.75rem; text-transform: uppercase;
   }
   thead th .has-tip { cursor: help; border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
@@ -106,7 +112,7 @@
 
   /* Rank and Team stay put as the table scrolls sideways. Widths are fixed
      so the second column's left offset is predictable. */
-  .sticky-col { position: sticky; z-index: 1; background: var(--card-bg); }
+  .sticky-col { position: sticky; z-index: 1; background: var(--card-bg); background-clip: padding-box; }
   .sticky-col-1 { left: 0; width: 3.25rem; min-width: 3.25rem; }
   .sticky-col-2 { left: 3.25rem; width: 4.5rem; min-width: 4.5rem; }
   .sticky-col-2 { box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15); }
@@ -206,7 +212,7 @@
     
 </main>
 <footer>
-  Generated 2026-09-08 21:57 UTC &middot; data from
+  Generated 2026-09-08 22:08 UTC &middot; data from
   <a href="https://github.com/nflverse/nflverse-data">nflverse-data</a> &middot;
   <a href="https://github.com/elanmuniz/NFL-Research">source</a>
 </footer>
