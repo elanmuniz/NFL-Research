@@ -183,6 +183,27 @@ STICKY_COL_CLASS = {"rank": "sticky-col sticky-col-1", "team": "sticky-col stick
 # sorts numerically on its underlying (unformatted) value.
 TEXT_SORT_COLS = {"team"}
 
+# These six columns are signed differentials (team's own number minus what
+# it allows/faces) -- colored green/positive or red/negative in the table,
+# reinforcing the +/- sign already in the formatted text rather than being
+# the only signal.
+SIGNED_DIFF_COLS = {
+    "turnover_margin_pg", "passer_rating_diff", "ypp_diff",
+    "success_rate_diff", "redzone_td_pct_diff", "adj_epa_rating",
+}
+
+
+def diff_class(val):
+    try:
+        num = float(val)
+    except (TypeError, ValueError):
+        return "diff-zero"
+    if num > 0:
+        return "diff-pos"
+    if num < 0:
+        return "diff-neg"
+    return "diff-zero"
+
 
 def rankings_table_html(df):
     head_cells = []
@@ -212,6 +233,8 @@ def rankings_table_html(df):
             classes = [STICKY_COL_CLASS[col]] if col in STICKY_COL_CLASS else []
             if col == "team":
                 classes.append("team-cell")
+            if col in SIGNED_DIFF_COLS:
+                classes.append(diff_class(val))
             cls_attr = f' class="{" ".join(classes)}"' if classes else ""
             sort_val = html.escape(str(val))
             cells.append(f'<td{cls_attr} data-sort="{sort_val}">{text}</td>')
@@ -286,7 +309,7 @@ def weights_section():
         return ""
     rows = sorted(w["weights"].items(), key=lambda kv: -abs(kv[1]))
     trs = "".join(
-        f"<tr><td>{feat}</td><td>{val:+.3f}</td>"
+        f'<tr><td>{feat}</td><td class="{diff_class(val)}">{val:+.3f}</td>'
         f"<td>{w['univariate_r_with_point_margin'][feat]:.2f}</td></tr>"
         for feat, val in rows
     )
@@ -319,23 +342,35 @@ def nav_html(active_file):
 STYLE = """
   :root {
     color-scheme: light dark;
-    --bg: #0b0d12;
-    --card-bg: #151822;
-    --text: #e8eaf0;
-    --muted: #9aa1b2;
-    --accent: #4f8cff;
-    --border: #262b38;
-    --hover-bg: #1a2134;
+    --bg: #0d0d0d;
+    --card-bg: #1a1a19;
+    --text: #ffffff;
+    --muted: #c3c2b7;
+    --accent: #3987e5;
+    --border: rgba(255, 255, 255, 0.10);
+    --hover-bg: rgba(57, 135, 229, 0.08);
+    --positive: #0ca30c;
+    --negative: #e66767;
+    --stripe-bg: rgba(255, 255, 255, 0.03);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
+    --metric-1: #3987e5; --metric-2: #d95926; --metric-3: #199e70;
+    --metric-4: #c98500; --metric-5: #d55181;
   }
   @media (prefers-color-scheme: light) {
     :root {
-      --bg: #f4f5f8;
-      --card-bg: #ffffff;
-      --text: #16181d;
-      --muted: #5b6472;
-      --accent: #2b62d9;
-      --border: #e3e6ec;
-      --hover-bg: #eff2fd;
+      --bg: #f9f9f7;
+      --card-bg: #fcfcfb;
+      --text: #0b0b0b;
+      --muted: #52514e;
+      --accent: #2a78d6;
+      --border: rgba(11, 11, 11, 0.10);
+      --hover-bg: rgba(42, 120, 214, 0.06);
+      --positive: #006300;
+      --negative: #c22a2a;
+      --stripe-bg: rgba(11, 11, 11, 0.02);
+      --shadow: 0 1px 2px rgba(11, 11, 11, .06), 0 8px 20px rgba(11, 11, 11, .06);
+      --metric-1: #2a78d6; --metric-2: #eb6834; --metric-3: #1baf7a;
+      --metric-4: #eda100; --metric-5: #e87ba4;
     }
   }
   * { box-sizing: border-box; }
@@ -344,20 +379,26 @@ STYLE = """
     background: var(--bg); color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
-  header { padding: 2rem 1.25rem 1rem; max-width: 1000px; margin: 0 auto; }
+  header { position: relative; padding: 2rem 1.25rem 1.25rem; max-width: 1000px; margin: 0 auto; }
+  header::after {
+    content: ""; position: absolute; left: 1.25rem; right: 1.25rem; bottom: 0; height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--metric-1), var(--metric-3), var(--metric-5));
+  }
   header h1 { margin: 0 0 0.25rem; font-size: 1.6rem; }
   header p { margin: 0; color: var(--muted); font-size: 0.9rem; }
-  .top-nav { display: flex; gap: 1.25rem; margin-top: 1rem; }
+  .top-nav { display: flex; gap: 0.4rem; margin-top: 1.1rem; }
   .nav-link {
-    color: var(--muted); text-decoration: none; font-size: 0.85rem;
-    font-weight: 600; padding-bottom: 0.35rem; border-bottom: 2px solid transparent;
+    display: inline-block; color: var(--muted); text-decoration: none; font-size: 0.85rem;
+    font-weight: 600; padding: 0.4rem 0.9rem; border-radius: 999px;
+    transition: background 0.15s, color 0.15s;
   }
-  .nav-link.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .nav-link:hover { color: var(--accent); }
+  .nav-link.active { color: #fff; background: var(--accent); }
+  .nav-link:not(.active):hover { color: var(--text); background: var(--hover-bg); }
   main { max-width: 1000px; margin: 0 auto; padding: 0 1.25rem 3rem; }
   .card {
-    background: var(--card-bg); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
+    background: var(--card-bg); border: 1px solid var(--border); box-shadow: var(--shadow);
+    border-radius: 16px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
   }
   .card h2 { margin-top: 0; font-size: 1.15rem; }
   .muted { color: var(--muted); font-size: 0.85rem; }
@@ -370,6 +411,9 @@ STYLE = """
   th, td { padding: 0.5rem 0.7rem; text-align: right; border-bottom: 1px solid var(--border); }
   th:first-child, td:first-child { text-align: left; }
   td.team-cell { text-align: left; font-weight: 600; }
+  .diff-pos { color: var(--positive); }
+  .diff-neg { color: var(--negative); }
+  .diff-zero { color: var(--muted); }
   thead th {
     position: sticky; top: 0; z-index: 2;
     background: var(--card-bg); color: var(--muted);
@@ -384,6 +428,13 @@ STYLE = """
   th .sort-arrow::before { content: ""; }
   th.sort-asc .sort-arrow::before { content: "\\25B2"; color: var(--accent); }
   th.sort-desc .sort-arrow::before { content: "\\25BC"; color: var(--accent); }
+  /* Zebra striping. Sticky cells carry their own opaque background (needed
+     to mask content scrolling underneath), so an even row's stripe must be
+     re-applied to its sticky cells explicitly or a seam appears once the
+     table is scrolled horizontally. Hover is declared after, so it always
+     wins over the stripe on the same row. */
+  tbody tr:nth-child(even) { background: var(--stripe-bg); }
+  tbody tr:nth-child(even) .sticky-col { background: var(--stripe-bg); }
   tbody tr:hover { background: var(--hover-bg); }
   tbody tr:hover .sticky-col { background: var(--hover-bg); }
   .table-hint { margin: 0.6rem 0 0; }
@@ -401,6 +452,17 @@ STYLE = """
   }
   .metric-label:first-of-type { margin-top: 0.25rem; }
   .card p:not(.metric-label):not(.muted) { margin: 0 0 0.5rem; line-height: 1.5; }
+  /* The border stripe is decorative (fine at lower contrast); the label
+     TEXT stays in the uniform --accent color rather than --metric-N --
+     three of the five metric hues (yellow/aqua/magenta) measure well
+     under WCAG's 4.5:1 text-contrast minimum against the light card
+     surface (as low as 2.1:1), so recoloring the text itself would make
+     those cards' labels hard to read in light mode. */
+  .metric-card-1 { border-left: 4px solid var(--metric-1); }
+  .metric-card-2 { border-left: 4px solid var(--metric-2); }
+  .metric-card-3 { border-left: 4px solid var(--metric-3); }
+  .metric-card-4 { border-left: 4px solid var(--metric-4); }
+  .metric-card-5 { border-left: 4px solid var(--metric-5); }
   footer { max-width: 1000px; margin: 0 auto; padding: 0 1.25rem 2rem; color: var(--muted); font-size: 0.8rem; }
   a { color: var(--accent); }
 """
@@ -485,9 +547,9 @@ def page_shell(active_file, title, subtitle, body_html):
 
 def metrics_section():
     cards = []
-    for m in METRICS:
+    for i, m in enumerate(METRICS, start=1):
         cards.append(f"""
-        <section class="card">
+        <section class="card metric-card-{i}">
           <h2>{m['name']}</h2>
           <p class="metric-label">The stat</p>
           <p>{m['stat']}</p>
