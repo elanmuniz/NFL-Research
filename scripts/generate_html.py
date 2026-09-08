@@ -403,9 +403,13 @@ STYLE = """
   .card h2 { margin-top: 0; font-size: 1.15rem; }
   .muted { color: var(--muted); font-size: 0.85rem; }
   /* overflow: auto (not overflow-x only) makes this a real 2-axis scroll
-     container with a bounded height, so the sticky header (top) and
-     sticky Rank/Team columns (left) below both stick relative to THIS
-     box's own scrollport, consistently, instead of the page's. */
+     container with a bounded height, so the native-sticky header (top)
+     sticks relative to THIS box's own scrollport, consistently, instead
+     of the page's. The Rank/Team columns' horizontal freeze no longer
+     depends on this element being a sticky containing block -- it's
+     JS-driven (see STICKY_SCROLL_SCRIPT) -- but this element's `scroll`
+     event is what that script listens to, so it still has to be the
+     actual scrolling element. */
   .table-wrap { overflow: auto; max-height: 70vh; }
   /* border-collapse: separate (not collapse) -- collapsed borders and
      position: sticky don't composite reliably together in every browser
@@ -445,21 +449,35 @@ STYLE = """
   tbody tr:hover .sticky-col { background: var(--hover-bg); }
   .table-hint { margin: 0.6rem 0 0; }
 
-  /* Rank and Team stay put as the table scrolls sideways. Widths are fixed
-     so the second column's left offset is predictable. will-change
-     promotes each sticky cell to its own GPU layer -- confirmed (user
-     report) needed specifically for Safari on macOS: Safari has a
-     long-documented repaint bug where a horizontally-sticky table cell's
-     compositor tile doesn't get correctly invalidated as the table
-     scrolls sideways, leaving stale pre-scroll content visible under the
-     new content painting in from underneath. This is the standard fix
-     for that exact bug. Scoped to .sticky-col only (covers both body
-     cells and the two sticky header corner cells via the shared class) --
-     not applied to thead th generally, since that bug is specific to
-     horizontal stickiness, not the header's separate vertical stickiness. */
-  .sticky-col { position: sticky; z-index: 1; will-change: transform; background: var(--card-bg); background-clip: padding-box; }
-  .sticky-col-1 { left: 0; width: 3.25rem; min-width: 3.25rem; }
-  .sticky-col-2 { left: 3.25rem; width: 4.5rem; min-width: 4.5rem; }
+  /* Rank and Team stay put as the table scrolls sideways -- but NOT via
+     native `position: sticky; left:`. Two rounds of Safari-specific CSS
+     hardening (border-collapse, background-clip, will-change) failed to
+     fix confirmed repaint/ghosting bugs on macOS Safari during horizontal
+     scroll, so this drops native sticky for the horizontal axis entirely
+     and drives it with JS instead (STICKY_SCROLL_SCRIPT below): on every
+     scroll of .table-wrap, it sets `transform: translateX(scrollLeft)`
+     directly on these cells. A transform write is something no browser
+     can get away with not repainting -- unlike sticky positioning, which
+     depends on the browser's own (evidently buggy, in this case)
+     scroll-triggered relayout/repaint logic. `position: relative` (not
+     sticky) here is just so z-index keeps applying predictably; it plays
+     no role in the actual freezing, which is 100% the JS transform.
+     thead th keeps native `position: sticky; top: 0` for the header's
+     *vertical* stickiness (unaffected -- only horizontal scroll was ever
+     reported as buggy), composed with the same JS-driven horizontal
+     transform on its Rank/Team corner cells via the shared class.
+     Important: `position: relative` below is scoped to `tbody
+     .sticky-col` specifically, NOT the bare `.sticky-col` class --
+     a bare class selector has higher specificity than `thead th`'s type
+     selectors and would silently override (not compose with) thead th's
+     `position: sticky`, breaking the header's vertical stickiness for
+     just the Rank/Team corner cells. (Caught this in the screenshot
+     regression check before shipping -- worth the explicit comment since
+     it's an easy mistake to reintroduce.) */
+  .sticky-col { z-index: 1; background: var(--card-bg); background-clip: padding-box; }
+  tbody .sticky-col { position: relative; }
+  .sticky-col-1 { width: 3.25rem; min-width: 3.25rem; }
+  .sticky-col-2 { width: 4.5rem; min-width: 4.5rem; }
   .sticky-col-2 { box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15); }
   thead th.sticky-col { z-index: 3; }
   .metric-label {
@@ -531,6 +549,42 @@ document.querySelectorAll('table.sortable-table').forEach(function (table) {
 """
 
 
+# Freezes the Rank/Team columns as .table-wrap scrolls sideways, by JS
+# instead of native `position: sticky; left:` -- see the comment on
+# .sticky-col in STYLE for why: native sticky's horizontal-scroll repaint
+# turned out to be unreliable specifically on macOS Safari (confirmed by
+# user report; two rounds of CSS-only hardening at the usual fix points
+# -- border-collapse, background-clip, will-change -- didn't resolve it).
+# A `transform` write can't silently fail to repaint the way sticky's
+# internal scroll-triggered relayout apparently can, so this computes the
+# offset ourselves on every scroll tick and applies it directly. Doesn't
+# hardcode either column's width/offset -- translateX(scrollLeft) shifts
+# each cell by exactly the amount scrolled, which cancels the scroll and
+# leaves it exactly where it started (its normal, unscrolled table
+# position), for however many/wide the frozen columns are.
+STICKY_SCROLL_SCRIPT = """
+document.querySelectorAll('.table-wrap').forEach(function (wrap) {
+  var stickyEls = wrap.querySelectorAll('.sticky-col-1, .sticky-col-2');
+  if (!stickyEls.length) return;
+  var ticking = false;
+  function apply() {
+    var x = wrap.scrollLeft;
+    stickyEls.forEach(function (el) {
+      el.style.transform = 'translateX(' + x + 'px)';
+    });
+    ticking = false;
+  }
+  wrap.addEventListener('scroll', function () {
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(apply);
+    }
+  }, { passive: true });
+  apply();
+});
+"""
+
+
 def page_shell(active_file, title, subtitle, body_html):
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     return f"""<!doctype html>
@@ -556,6 +610,7 @@ def page_shell(active_file, title, subtitle, body_html):
   <a href="https://github.com/{os.environ.get('GITHUB_REPOSITORY', 'elanmuniz/NFL-Research')}">source</a>
 </footer>
 <script>{SORT_SCRIPT}</script>
+<script>{STICKY_SCROLL_SCRIPT}</script>
 </body>
 </html>
 """
