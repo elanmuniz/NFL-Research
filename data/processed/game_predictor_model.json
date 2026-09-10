@@ -1,0 +1,113 @@
+{
+  "features": [
+    "turnover_margin_pg",
+    "passer_rating_diff",
+    "ypp_diff",
+    "success_rate_diff",
+    "redzone_td_pct_diff",
+    "adj_epa_rating"
+  ],
+  "shrink_k": 4.0,
+  "backtest": {
+    "per_season": {
+      "2023": {
+        "model": {
+          "accuracy": 0.5956,
+          "log_loss": 0.6699,
+          "brier": 0.2392
+        },
+        "home_field": {
+          "accuracy": 0.5551,
+          "log_loss": 0.6879,
+          "brier": 0.2474
+        },
+        "vegas": {
+          "accuracy": 0.6801,
+          "log_loss": 0.6231,
+          "brier": 0.2169
+        }
+      },
+      "2024": {
+        "model": {
+          "accuracy": 0.6691,
+          "log_loss": 0.6243,
+          "brier": 0.2163
+        },
+        "home_field": {
+          "accuracy": 0.5331,
+          "log_loss": 0.6913,
+          "brier": 0.2491
+        },
+        "vegas": {
+          "accuracy": 0.7132,
+          "log_loss": 0.5869,
+          "brier": 0.2
+        }
+      },
+      "2025": {
+        "model": {
+          "accuracy": 0.6176,
+          "log_loss": 0.645,
+          "brier": 0.2265
+        },
+        "home_field": {
+          "accuracy": 0.5368,
+          "log_loss": 0.6906,
+          "brier": 0.2487
+        },
+        "vegas": {
+          "accuracy": 0.6544,
+          "log_loss": 0.6082,
+          "brier": 0.2116
+        }
+      }
+    },
+    "average": {
+      "model": {
+        "accuracy": 0.6274,
+        "log_loss": 0.6464,
+        "brier": 0.2273
+      },
+      "home_field": {
+        "accuracy": 0.5417,
+        "log_loss": 0.6899,
+        "brier": 0.2484
+      },
+      "vegas": {
+        "accuracy": 0.6826,
+        "log_loss": 0.6061,
+        "brier": 0.2095
+      }
+    }
+  },
+  "standardized_coefficients": {
+    "turnover_margin_pg_diff": 0.1598,
+    "passer_rating_diff_diff": -0.1172,
+    "ypp_diff_diff": 0.2579,
+    "success_rate_diff_diff": 0.2275,
+    "redzone_td_pct_diff_diff": -0.0619,
+    "adj_epa_rating_diff": 0.3048
+  },
+  "scaler_mean": {
+    "turnover_margin_pg_diff": 0.015156,
+    "passer_rating_diff_diff": -0.140403,
+    "ypp_diff_diff": -0.004226,
+    "success_rate_diff_diff": -0.000319,
+    "redzone_td_pct_diff_diff": -0.000116,
+    "adj_epa_rating_diff": 0.001401
+  },
+  "scaler_scale": {
+    "turnover_margin_pg_diff": 0.705806,
+    "passer_rating_diff_diff": 17.270654,
+    "ypp_diff_diff": 0.837204,
+    "success_rate_diff_diff": 0.049963,
+    "redzone_td_pct_diff_diff": 0.145033,
+    "adj_epa_rating_diff": 0.159435
+  },
+  "train_seasons": [
+    2023,
+    2024,
+    2025
+  ],
+  "n_games": 816
+}
