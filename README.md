@@ -311,3 +311,9 @@ toggle):
 GitHub will publish it at `https://<owner>.github.io/<repo>/` within a
 minute or two, and it'll pick up new commits from the workflow above
 automatically — no redeploy step needed.
+
+## License
+
+All rights reserved. See [LICENSE](LICENSE) — this repository is
+proprietary; no reuse, redistribution, or modification is permitted
+without prior written permission from the copyright holder.
